@@ -1,0 +1,7 @@
+{
+  "name": "Maximum Override",
+  "id": "844697202715835091",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html"
+}
