@@ -3,28 +3,32 @@ import * as ReactDOM from 'react-dom'
 import './ui.scss'
 import '../dist/ui.css'
 import '../node_modules/figma-plugin-ds/dist/figma-plugin-ds.css';
-import {IOverrideData} from './code'
+import { IOverrideData } from './code'
 
 declare function require(path: string): any
 
-interface IProps {}
+interface IProps { }
 
 interface IState {
-    headerContent?:any;
-    diffContent?:any;
-    currentTargetData?:IOverrideData;
+    saveEnabled: boolean;
+    applyEnabled: boolean;
+    headerContent?: any;
+    diffContent?: any;
+    currentTargetData?: IOverrideData;
 }
 
 interface IColor {
-    r:number;
-    g:number;
-    b:number;
+    r: number;
+    g: number;
+    b: number;
 }
 
 class App extends React.Component<IProps, IState> {
-    state:IState = {
+    state: IState = {
         diffContent: <div>{`Select one instance to compare to the master component. Select two items to compare against each other.`}</div>,
         headerContent: <div></div>,
+        saveEnabled: false,
+        applyEnabled: false,
         currentTargetData: null
     };
 
@@ -38,7 +42,9 @@ class App extends React.Component<IProps, IState> {
                     this.setState({
                         diffContent: this.renderNodeData(payload.target, true),
                         headerContent: this.renderHeader(payload.source, payload.target),
-                        currentTargetData: payload.target
+                        currentTargetData: payload.target,
+                        saveEnabled: true,
+                        applyEnabled: true
                     });
                     break;
                 case "save-confirmation":
@@ -49,33 +55,33 @@ class App extends React.Component<IProps, IState> {
         parent.postMessage({ pluginMessage: { type: 'inspect-selected' } }, '*');
     }
 
-    RGBToHex = (color:IColor) => {
+    RGBToHex = (color: IColor) => {
         let r = color.r.toString(16);
         let g = color.g.toString(16);
         let b = color.b.toString(16);
         if (r.length == 1)
-          r = "0" + r;
+            r = "0" + r;
         if (g.length == 1)
-          g = "0" + g;
+            g = "0" + g;
         if (b.length == 1)
-          b = "0" + b;
+            b = "0" + b;
         return "#" + r + g + b;
     }
 
     renderRGBColor = (paint) => {
-        let color:IColor;
-        const isNone = paint.type === "NONE";
+        let color: IColor;
+        const isNone = paint === undefined;
         if (isNone) {
-            color = {r:1, g:1, b:1};
+            color = { r: 1, g: 1, b: 1 };
         } else {
             color = paint.color;
         }
-        let converted:IColor = {
+        let converted: IColor = {
             r: Math.round(color.r * 255),
             g: Math.round(color.g * 255),
             b: Math.round(color.b * 255)
         }
-        let toolTip:string;
+        let toolTip: string;
         if (isNone) {
             toolTip = '(None)';
         } else {
@@ -86,14 +92,14 @@ class App extends React.Component<IProps, IState> {
         return (
             <span
                 className={classes}
-                style={{backgroundColor: rgbString}}
+                style={{ backgroundColor: rgbString }}
                 data-content={toolTip}>
             </span>
         )
     }
 
-    renderOverrideProp = (prop:any) => {
-        const {key, from, to} = prop;
+    renderOverrideProp = (prop: any) => {
+        const { key, from, to } = prop;
         switch (key) {
             case 'strokes':
             case 'fills':
@@ -133,7 +139,7 @@ class App extends React.Component<IProps, IState> {
         }
     }
 
-    renderOverrideProps = (props:any[]) => {
+    renderOverrideProps = (props: any[]) => {
         return (
             <div className="props">
                 {
@@ -145,8 +151,8 @@ class App extends React.Component<IProps, IState> {
         )
     }
 
-    renderNodeIcon = (type:string) => {
-        let iconText:string = "";
+    renderNodeIcon = (type: string) => {
+        let iconText: string = "";
         let iconType = type.toLowerCase();
         if (type === "TEXT") {
             iconText = "T";
@@ -159,7 +165,7 @@ class App extends React.Component<IProps, IState> {
     }
 
     // Recursive
-    renderNodeData = (nodeData:IOverrideData, isTop:boolean) => {
+    renderNodeData = (nodeData: IOverrideData, isTop: boolean) => {
         // console.log("renderOverrideData", data, isTop);
         const classes = isTop ? "node node--top" : "node";
         return (
@@ -178,7 +184,7 @@ class App extends React.Component<IProps, IState> {
         )
     }
 
-    renderHeader(sourceData:IOverrideData, targetData:IOverrideData) {
+    renderHeader(sourceData: IOverrideData, targetData: IOverrideData) {
         return (
             <>
                 <span>{this.renderNodeIcon(sourceData.type)}</span>
@@ -195,25 +201,46 @@ class App extends React.Component<IProps, IState> {
     }
 
     onSave = () => {
-        parent.postMessage({ pluginMessage: { 
-            type: 'save-overrides',
-            data: this.state.currentTargetData,
-        }}, '*')
+        parent.postMessage({
+            pluginMessage: {
+                type: 'save-overrides',
+                data: this.state.currentTargetData,
+            }
+        }, '*')
     }
 
     onApply = () => {
-        parent.postMessage({ pluginMessage: { 
-            type: 'apply-overrides'
-        }}, '*')
+        parent.postMessage({
+            pluginMessage: {
+                type: 'apply-overrides'
+            }
+        }, '*')
     }
 
     render() {
         return (
             <div className="maximumOverride">
                 <div className="buttons">
-                    <button className="button button--secondary" id="inspect" onClick={this.onInspect}>Inspect selection</button>
-                    <button className="button button--secondary" id="save" onClick={this.onSave}>Save overrides</button>
-                    <button className="button button--secondary" id="apply" onClick={this.onApply}>Apply overrides</button>
+                    <button
+                        className="button button--secondary"
+                        id="inspect"
+                        onClick={this.onInspect}>
+                            Inspect selection
+                    </button>
+                    <button
+                        className="button button--secondary" 
+                        id="save"
+                        onClick={this.onSave}
+                        disabled={!this.state.saveEnabled}>
+                            Save overrides
+                    </button>
+                    <button
+                        className="button button--secondary"
+                        id="apply"
+                        onClick={this.onApply}
+                        disabled={!this.state.applyEnabled}>
+                            Apply overrides
+                    </button>
                 </div>
                 <div className="header">
                     {this.state.headerContent}
