@@ -3,18 +3,23 @@ import * as ReactDOM from 'react-dom'
 import './ui.scss'
 import '../dist/ui.css'
 import '../node_modules/figma-plugin-ds/dist/figma-plugin-ds.css';
-import { IOverrideData } from './code'
+import * as MO from './code'
+import { ISelectionValidation, SelectionValidation } from './util'
 
 declare function require(path: string): any
 
 interface IProps { }
 
 interface IState {
-    saveEnabled: boolean;
-    applyEnabled: boolean;
+    inspectEnabled: boolean;
+    inspectMessage: string;
+    copyEnabled: boolean;
+    pasteEnabled: boolean;
     headerContent?: any;
     diffContent?: any;
-    currentTargetData?: IOverrideData;
+    targetData?: MO.IOverrideData;
+    sourceData?: MO.IOverrideData;
+    copyButtonMessage: string;
 }
 
 interface IColor {
@@ -25,34 +30,68 @@ interface IColor {
 
 class App extends React.Component<IProps, IState> {
     state: IState = {
-        diffContent: <div>{`Select one instance to compare to the master component. Select two items to compare against each other.`}</div>,
+        diffContent: '',
+        inspectMessage: '',
         headerContent: <div></div>,
-        saveEnabled: false,
-        applyEnabled: false,
-        currentTargetData: null
+        inspectEnabled: false,
+        copyEnabled: false,
+        pasteEnabled: false,
+        targetData: undefined,
+        copyButtonMessage: "Copy overrides",
     };
 
     componentDidMount = () => {
         window.addEventListener("message", (event) => {
             const message = event.data.pluginMessage;
             const payload = message.payload;
-            console.log('message receieved at UI', message);
+            // console.log('Message receieved at UI', message);
             switch (message.type) {
+                case "selection-validation":
+                    const validation: ISelectionValidation = message.validation;
+                    let inspectMessage: string;
+                    switch (validation.reason) {
+                        case SelectionValidation.IS_INSTANCE:
+                            inspectMessage = "Compare instance to master";
+                            break;
+                        case SelectionValidation.IS_TWO:
+                            inspectMessage = "Compare selected items";
+                            break;
+                        default:
+                            inspectMessage = "Select items to compare";
+                            break;
+                    }
+                    this.setState({
+                        inspectEnabled: validation.isValid,
+                        inspectMessage
+                    });
+                    break;
+                case "data-verified":
+                    this.setState({ pasteEnabled: true });
+                    break;
                 case "inspected-data":
                     this.setState({
                         diffContent: this.renderNodeData(payload.target, true),
                         headerContent: this.renderHeader(payload.source, payload.target),
-                        currentTargetData: payload.target,
-                        saveEnabled: true,
-                        applyEnabled: true
+                        targetData: payload.target,
+                        sourceData: payload.source,
+                        copyEnabled: true,
+                        copyButtonMessage: "Copy overrides",
+                        inspectEnabled: false
                     });
                     break;
-                case "save-confirmation":
-                    console.log("Save confirmation message received");
+                case "copy-confirmation":
+                    console.log("Copy confirmation message received");
+                    this.setState({
+                        copyButtonMessage: "Overrides copied",
+                        copyEnabled: false,
+                        pasteEnabled: true
+                    });
                     break;
             }
         });
-        parent.postMessage({ pluginMessage: { type: 'inspect-selected' } }, '*');
+
+        // Request selection validation
+        parent.postMessage({ pluginMessage: { type: 'initial-render' } }, '*');
     }
 
     RGBToHex = (color: IColor) => {
@@ -68,7 +107,7 @@ class App extends React.Component<IProps, IState> {
         return "#" + r + g + b;
     }
 
-    renderRGBColor = (paint) => {
+    renderRGBColor = (paint: any) => {
         let color: IColor;
         const isNone = paint === undefined;
         if (isNone) {
@@ -88,18 +127,18 @@ class App extends React.Component<IProps, IState> {
             toolTip = this.RGBToHex(converted).toUpperCase();
         }
         let rgbString = `rgb(${converted.r}, ${converted.g}, ${converted.b})`
-        let classes = isNone ? "rgbColor rgbColor--none" : "rgbColor";
+        let classes = isNone ? "rgbColor rgbColor--none" : "rgbColor hasTooltip";
         return (
             <span
                 className={classes}
                 style={{ backgroundColor: rgbString }}
-                data-content={toolTip}>
+                data-tooltip={toolTip}>
             </span>
         )
     }
 
     renderOverrideProp = (prop: any) => {
-        const { key, from, to } = prop;
+        const { key, sourceValue, targetValue } = prop;
         switch (key) {
             case 'strokes':
             case 'fills':
@@ -107,32 +146,45 @@ class App extends React.Component<IProps, IState> {
                 return (
                     <span className="prop" key={key}>
                         <span className="key">{key}:</span>
-                        <span>{this.renderRGBColor(from[0])}</span>
+                        <span>{this.renderRGBColor(sourceValue[0])}</span>
                         <span className="arrow">→</span>
-                        <span>{this.renderRGBColor(to[0])}</span>
+                        <span>{this.renderRGBColor(targetValue[0])}</span>
                     </span>
                 )
-            case "backgroundStyleId":
-            case "fillStyleId":
-            case "strokeStyleId":
-                // Ignore these for output
-                return false;
             case "masterComponent":
                 return (
                     <span className="prop" key={key}>
                         <span className="key">Master:</span>
-                        <span>{from.name}</span>
+                        <span className="hasTooltip" data-tooltip={sourceValue.name}>
+                            <span className="value">{sourceValue.name}</span>
+                        </span>
                         <span className="arrow">→</span>
-                        <span>{to.name}</span>
+                        <span className="hasTooltip" data-tooltip={targetValue.name}>
+                            <span className="value">{targetValue.name}</span>
+                        </span>
+                    </span>
+                )
+            case "name":
+            case "characters":
+                return (
+                    <span className="prop" key={key}>
+                        <span className="key">{key}:</span>
+                        <span className="hasTooltip" data-tooltip={sourceValue.toString()}>
+                            <span className="value">{sourceValue.toString()}</span>
+                        </span>
+                        <span className="arrow">→</span>
+                        <span className="hasTooltip" data-tooltip={targetValue.toString()}>
+                            <span className="value">{targetValue.toString()}</span>
+                        </span>
                     </span>
                 )
             default:
                 return (
                     <span className="prop" key={key}>
                         <span className="key">{key}:</span>
-                        <span>{from.toString()}</span>
+                        <span className="value">{sourceValue.toString()}</span>
                         <span className="arrow">→</span>
-                        <span>{to.toString()}</span>
+                        <span className="value">{targetValue.toString()}</span>
                     </span>
                 )
 
@@ -165,8 +217,7 @@ class App extends React.Component<IProps, IState> {
     }
 
     // Recursive
-    renderNodeData = (nodeData: IOverrideData, isTop: boolean) => {
-        // console.log("renderOverrideData", data, isTop);
+    renderNodeData = (nodeData: MO.IOverrideData, isTop: boolean) => {
         const classes = isTop ? "node node--top" : "node";
         return (
             <div className={classes} key={nodeData.id.toString()}>
@@ -184,7 +235,7 @@ class App extends React.Component<IProps, IState> {
         )
     }
 
-    renderHeader(sourceData: IOverrideData, targetData: IOverrideData) {
+    renderHeader(sourceData: MO.IOverrideData, targetData: MO.IOverrideData) {
         return (
             <>
                 <span>{this.renderNodeIcon(sourceData.type)}</span>
@@ -197,60 +248,75 @@ class App extends React.Component<IProps, IState> {
     }
 
     onInspect = () => {
-        parent.postMessage({ pluginMessage: { type: 'inspect-selected' } }, '*')
-    }
-
-    onSave = () => {
         parent.postMessage({
             pluginMessage: {
-                type: 'save-overrides',
-                data: this.state.currentTargetData,
+                type: 'inspect-selected'
             }
         }, '*')
     }
 
-    onApply = () => {
+    onCopy = () => {
         parent.postMessage({
             pluginMessage: {
-                type: 'apply-overrides'
+                type: 'copy-overrides',
+                data: this.state.targetData,
+            }
+        }, '*')
+    }
+
+    onPaste = () => {
+        parent.postMessage({
+            pluginMessage: {
+                type: 'paste-overrides'
             }
         }, '*')
     }
 
     render() {
         return (
-            <div className="maximumOverride">
-                <div className="buttons">
-                    <button
-                        className="button button--secondary"
-                        id="inspect"
-                        onClick={this.onInspect}>
-                            Inspect selection
-                    </button>
-                    <button
-                        className="button button--secondary" 
-                        id="save"
-                        onClick={this.onSave}
-                        disabled={!this.state.saveEnabled}>
-                            Save overrides
-                    </button>
-                    <button
-                        className="button button--secondary"
-                        id="apply"
-                        onClick={this.onApply}
-                        disabled={!this.state.applyEnabled}>
-                            Apply overrides
-                    </button>
-                </div>
-                <div className="header">
-                    {this.state.headerContent}
-                </div>
-                <div className="diff">
-                    <div className="nodes">
-                        {this.state.diffContent}
+            <>
+                <div className="MaximumOverride">
+                    <div className="buttons">
+                        <button
+                            className="button button--secondary"
+                            id="inspect"
+                            onClick={this.onInspect}
+                            disabled={!this.state.inspectEnabled}>
+                            {this.state.inspectMessage}
+                        </button>
+                        <button
+                            className="button button--secondary"
+                            id="copy"
+                            onClick={this.onCopy}
+                            disabled={!this.state.copyEnabled}>
+                            {this.state.copyButtonMessage}
+                        </button>
+                        <button
+                            className="button button--secondary"
+                            id="paste"
+                            onClick={this.onPaste}
+                            disabled={!this.state.pasteEnabled}>
+                            Paste overrides
+                        </button>
+                    </div>
+                    <div className="header">
+                        {this.state.headerContent}
+                    </div>
+                    <div className="diff">
+                        <div className="nodes">
+                            {this.state.targetData === undefined &&
+                                <div className="emptyState">
+                                    <div className="logo" />
+                                    <p>Select one <strong>component instance</strong> to compare it against its master component</p>
+                                    <p className="centered"><strong>OR</strong></p>
+                                    <p>Select <strong>two items</strong> of any type to compare them to each other.</p>
+                                </div>
+                            }
+                            {this.state.diffContent}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </>
         )
     }
 }

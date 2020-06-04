@@ -1,10 +1,43 @@
-.maximumOverride {
+.MaximumOverride {
   padding: 12px;
-
 }
 
 ::-webkit-scrollbar {
   width: 40px;
+}
+
+.emptyState {
+  position: absolute;
+  display: flex;
+  flex-flow: column nowrap;
+  justify-content: center;
+  align-items: center;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--silver);
+  text-align: left;
+  z-index: 100;
+
+  p {
+    width: 320px;
+    margin-bottom: 0.25em;
+    font-size: var(--font-size-xlarge);
+
+    &.centered {
+      text-align: center;
+    }
+  }
+
+  .logo {
+    width: 320px;
+    height: 200px;
+    background: url(./maximum_override_logo_2x.png);
+    background-position: 50% 50%;
+    background-size: contain;
+    background-repeat: no-repeat;
+  }
 }
 
 .buttons {
@@ -48,7 +81,8 @@
 }
 
 .diff {
-  font-size: 12px;
+  position: relative;
+  font-size: var(--font-size-small);
   display: flex;
   flex-flow: row nowrap;
   background-color: var(--grey);
@@ -61,11 +95,22 @@
 }
 
 .node {
+  position: relative;
   text-align: left;
   border-left: 1px solid rgba(0,0,0,0.15);
-  border-bottom-left-radius: 8px;
   padding: 4px 0 0 5px;
   margin-left: 9px;
+  // border-bottom-left-radius: 8px;
+
+  // &::before {
+  //   content: '';
+  //   position: absolute;
+  //   bottom: 0;
+  //   left: 4px;
+  //   height: 1px;
+  //   width: 10px;
+  //   background: linear-gradient(to right, rgba(0,0,0,0.15), rgba(0,0,0,0));
+  // }
 
   &--top {
     border-left: none;
@@ -95,21 +140,32 @@
 
     .prop {
       display: inline-flex;
+      position: relative;
       align-items: center;
       padding: 2px 4px;
       background: #fff;
       border-radius: 4px;
-      margin: 0 6px 3px;
+      margin: 0 4px 4px;
 
-      span {
+      .value {
+        display: inline-block;
         color: var(--purple);
+        max-width: 140px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        padding: 0 2px;
       }
-      
+
       .key, .arrow {
         text-transform: capitalize;
         color: var(--hud)
       }
-      
+
+      span {
+        position: relative;
+      }
+
       span:not(:first-child) {
         margin-left: 2px;
       }
@@ -123,12 +179,6 @@
       height: 12px;
       border: 1px solid #333;
       border-radius: 4px;
-      
-      &:hover {
-        &::after {
-          opacity: 1;
-        }
-      }
       
       &--none {
         border-color: #ccc;
@@ -148,19 +198,40 @@
         color: #999;
       }
 
-      &::after {
-        content: attr(data-content);
-        position: absolute;
-        font-size: 12px;
-        top: -2.5em;
-        left: -2.5em;
-        background: #333;
-        color: #fff;
-        padding: 4px 8px;
-        border-radius: 4px;
-        opacity: 0;
-        transition: opacity 0.15s;
-      }
+    }
+  }
+}
+
+.hasTooltip {
+  cursor: default;
+  transition: all 0.15s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0);
+  
+  &::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    font-size: var(--font-size-xsmall);
+    bottom: 1.5em;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    max-width: 300px;
+    background: #333;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    pointer-events: none;
+  }
+  
+  &:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    border-radius: 4px;
+    z-index: 10;
+
+    &::after {
+      opacity: 1;
     }
   }
 }

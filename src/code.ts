@@ -1,4 +1,9 @@
-import equal from "deep-equal";
+import {
+    log, 
+    checkEquality,
+    formatOverrideProp,
+    validateSelection
+} from './util'
 
 figma.showUI(__html__, { width: 600, height: 600 });
 
@@ -11,157 +16,151 @@ export interface IOverrideData {
     childData?: IOverrideData[];
 }
 
-function checkEquality(key: string, sourceValue: any, targetValue: any) {
-    switch (key) {
-       case "masterComponent":
-           return sourceValue.id === targetValue.id;
-       default:
-           return equal(sourceValue, targetValue);
-    }
-}
-
-function formatOverrideProp(key: string, prop: any) {
-    // console.log("fop", key, prop);
-    switch (key) {
-       case "backgrounds":
-       case "fills":
-       case "strokes":
-           if (!Array.isArray(prop) || !prop[0]) {
-              // console.log(key, "is not an array.", prop);
-              return [];
-           }
-           break;
-       case "masterComponent":
-           return { name: prop.name, id: prop.id };
-    }
-    return prop;
-}
+let temporaryNodes:SceneNode[] = [];
 
 /**
- * @param target The node that's being recursively introspected
- * @param source The node we're comparing against (an instance of master for single selection)
+ * @param targetNode The node that's being recursively introspected
+ * @param sourceNode The node we're comparing against (an instance of master for single selection)
  * @param recursionLevel Integer for indenting output strings
  */
 function getOverridesForNode(
-    source: SceneNode,
-    target: SceneNode,
+    sourceNode: SceneNode,
+    targetNode: SceneNode,
     recursionLevel: number
 ) {
-    let indent = "├" + "─".repeat(recursionLevel - 1) + " ";
-    let logMessage = indent;
+    let logMessage = "";
     let overrides = [];
-    if (!checkEquality(target.type, target, source)) {
-       logMessage += target.type + " " + target.name;
+    if (!checkEquality(targetNode.type, targetNode, sourceNode)) {
+        logMessage += targetNode.type + " " + targetNode.name;
     }
     overridableProps.forEach((key) => {
-       if (key in target && key in source) {
-           if (!checkEquality(key, target[key], source[key])) {
-              overrides.push({
-                  key: key,
-                  from: formatOverrideProp(key, source[key]),
-                  to: formatOverrideProp(key, target[key]),
-              });
-           }
-       }
+        if (key in targetNode && key in sourceNode) {
+            if (!checkEquality(key, targetNode[key], sourceNode[key])) {
+                overrides.push({
+                    key: key,
+                    sourceValue: formatOverrideProp(key, sourceNode[key]),
+                    targetValue: formatOverrideProp(key, targetNode[key]),
+                });
+            }
+        }
     });
 
     const numOverrides = overrides.length;
     if (numOverrides > 0) {
-       logMessage += " ::: " + numOverrides + " overrides: ";
-       logMessage += Object.keys(overrides).toString().replace(/,/g, ", ");
+        logMessage += " ::: " + numOverrides + " overrides: ";
+        logMessage += Object.keys(overrides).toString().replace(/,/g, ", ");
     }
 
-    return overrides;
+    log(recursionLevel, logMessage);
 
-    // console.log(logMessage);
-    // printDiff(source, target, indent);
+    return overrides;
 }
 
 // recursion
-function compareOverrides(
-    source: IOverrideData,
-    target: IOverrideData,
+function compareProps(
+    sourceData: IOverrideData,
+    targetData: IOverrideData,
     recursionLevel: number
 ) {
-    target.overriddenProps = getOverridesForNode(
-       source.associatedNode,
-       target.associatedNode,
-       recursionLevel
+    targetData.overriddenProps = getOverridesForNode(
+        sourceData.associatedNode,
+        targetData.associatedNode,
+        recursionLevel
     );
-    let indent = "├" + "─".repeat(recursionLevel - 1) + " ";
 
-    if (
-       "children" in target.associatedNode &&
-       target.associatedNode.children.length
-    ) {
-       const nodeChildren = target.associatedNode.children;
-       let childData = [];
-       for (let i = 0; i < nodeChildren.length; i++) {
-           const targetChild = nodeChildren[i] as SceneNode;
-           // console.log(indent, " within loop, targetChild:", targetChild);
-           const targetChildData = createDataWrapperForNode(targetChild);
-           if ("children" in source.associatedNode) {
-              const sourceChild = source.associatedNode.children[i] as SceneNode;
-              const sourceChildData = createDataWrapperForNode(sourceChild);
-              compareOverrides(sourceChildData, targetChildData, recursionLevel + 1);
-              childData.push(targetChildData);
-           } else {
-              console.log(
-                  "Original node " + source.name + " has no matching children."
-              );
-           }
-       }
-       target.childData = childData.length > 0 ? childData : null;
+    if ( "children" in targetData.associatedNode && targetData.associatedNode.children.length ) {
+        /*
+         If the target's masterComponent has changed, we need to compare against an instance
+         of that master rather than the original component
+         TODO: make this toggleable?
+        */
+        let newMaster:boolean;
+        targetData.overriddenProps.forEach((prop) => {
+            if (prop.key === 'masterComponent') newMaster = true;
+        });
+        if (newMaster) {
+            let newSourceNode:SceneNode = ((targetData.associatedNode as InstanceNode).masterComponent as ComponentNode).createInstance();
+            let newSourceData:IOverrideData = createDataWrapperForNode(newSourceNode);
+            log(recursionLevel, 'New Master', newSourceNode.name, newSourceData);
+            sourceData = newSourceData;
+            temporaryNodes.push(newSourceNode);
+        }
+        const nodeChildren = targetData.associatedNode.children;
+        let childData = [];
+        for (let i = 0; i < nodeChildren.length; i++) {
+            const targetChild = nodeChildren[i] as SceneNode;
+            // console.log(indent, " within loop, targetChild:", targetChild);
+            const targetChildData = createDataWrapperForNode(targetChild);
+            if ("children" in sourceData.associatedNode) {
+                const sourceChild = sourceData.associatedNode.children[i] as SceneNode;
+                if (sourceChild === undefined) {
+                    console.log('sourceChild at ', i, 'is undefined in', sourceData.associatedNode.children);
+                    break;
+                }
+                const sourceChildData = createDataWrapperForNode(sourceChild);
+                compareProps(sourceChildData, targetChildData, recursionLevel + 1);
+                childData.push(targetChildData);
+            } else {
+                console.log(
+                    "Original node " + sourceData.name + " has no matching children."
+                );
+            }
+        }
+        targetData.childData = childData.length > 0 ? childData : null;
     }
 }
 
 function createDataWrapperForNode(node: SceneNode): IOverrideData {
     let data: IOverrideData = {
-       name: node.name,
-       type: node.type,
-       id: node.id,
-       associatedNode: node,
+        name: node.name,
+        type: node.type,
+        id: node.id,
+        associatedNode: node,
     };
     return data;
 }
 
+function cleanUpTemporaryNodes() {
+    temporaryNodes.forEach(node => {
+        node.remove();
+    });
+    temporaryNodes = [];
+}
+
 function getOverrideDataForSelection(selection: SceneNode[]) {
     let targetNode: SceneNode, sourceNode: SceneNode;
-    let target: IOverrideData, source: IOverrideData;
-    let cleanUpInstance = false;
+    let targetData: IOverrideData, sourceData: IOverrideData;
     if (selection.length === 1) {
-       targetNode = selection[0];
-       if (targetNode.type === "INSTANCE") {
-           targetNode = selection[0] as InstanceNode;
-           target = createDataWrapperForNode(targetNode);
-           sourceNode = targetNode.masterComponent.createInstance();
-           source = createDataWrapperForNode(sourceNode);
-           source.name = "Master";
-           source.type = "COMPONENT";
-           console.log("Comparing master ", source, " to target ", target);
-           cleanUpInstance = true;
-       } else {
-           console.log("Selection must be an Instance.");
-       }
+        targetNode = selection[0];
+        if (targetNode.type === "INSTANCE") {
+            targetNode = selection[0] as InstanceNode;
+            targetData = createDataWrapperForNode(targetNode);
+            sourceNode = targetNode.masterComponent.createInstance();
+            sourceData = createDataWrapperForNode(sourceNode);
+            sourceData.name = "Master";
+            sourceData.type = "COMPONENT";
+            log(0, "Comparing master ", sourceData, " to target ", targetData);
+            temporaryNodes.push(sourceData.associatedNode);
+        } else {
+            console.log("Selection must be an Instance.");
+        }
     } else if (selection.length == 2) {
-       // note that order is reversed
-       sourceNode = selection[0];
-       source = createDataWrapperForNode(sourceNode);
-       targetNode = selection[1];
-       target = createDataWrapperForNode(targetNode);
+        // note that order is reversed
+        sourceNode = selection[0];
+        sourceData = createDataWrapperForNode(sourceNode);
+        targetNode = selection[1];
+        targetData = createDataWrapperForNode(targetNode);
     } else {
-       console.log("Cannot compare more than two selected items.");
+        console.log("Cannot compare more than two selected items.");
     }
 
-    compareOverrides(source, target, 1);
+    compareProps(sourceData, targetData, 1);
 
     let returnData = {
-       source,
-       target,
+        source: sourceData,
+        target: targetData,
     };
-    if (cleanUpInstance) {
-       source.associatedNode.remove();
-    }
+    cleanUpTemporaryNodes();
     return returnData;
 }
 
@@ -170,7 +169,7 @@ function applyOverrideProp(
     prop: any,
     target: SceneNode,
     isRoot: boolean
-) {
+):boolean {
     // console.log("fop", key, prop);
     switch (key) {
         case "backgrounds":
@@ -179,12 +178,7 @@ function applyOverrideProp(
             if (Array.isArray(prop)) {
                 target[key] = prop;
             }
-            break;
-        case "backgroundStyleId":
-        case "fillStyleId":
-        case "strokeStyleId":
-            // ignore these
-            break;
+            return false;
         case "masterComponent":
             // don't apply this one at the root level
             if (!isRoot) {
@@ -192,139 +186,179 @@ function applyOverrideProp(
                 // target["autoRename"] = false;
                 target[key] = prop;
             }
-            break;
+            return true; // Whether to apply a delay before continuing
         case "characters":
+        case "fontSize":
+        case "fontName":
+        case "textStyleId":
+        case "textCase":
+        case "textDecoration":
+        case "letterSpacing":
+        case "lineHeight":
             // must load font first
-            console.log("================= TEXT", (target as TextNode).fontName);
-            if ("fontName" in target) {
-                let textNode = (target as TextNode);
-                let fontName = textNode.fontName as FontName;
-                figma.loadFontAsync(fontName).then(data => {
-                    textNode.characters = prop;
+            if (key in target) {
+                if (typeof prop === "symbol") {
+                    console.log("Multiple font attributes detected within ", prop);
+                    return false;
+                }
+                let textNode = target as TextNode;
+                if (textNode.hasMissingFont) {
+                    console.log("Text field has missing font. Can't edit properties.");
+                    return false;
+                }
+                let fontName = textNode.fontName;
+                if (typeof fontName === "symbol") {
+                    console.log("Multiple font attributes detected within ", target.name);
+                    return false;
+                }
+                figma.loadFontAsync(fontName as FontName).then((data) => {
+                    (textNode as any)[key] = prop;
                 });
             }
-            break;
+            return false;
         default:
             target[key] = prop;
-            break;
+            return false;
     }
 }
 
 function applyOverridesToNode(
-    overrides: IOverrideData,
+    data: IOverrideData,
     target: any,
     recursionLevel: number
 ) {
     const isRoot = recursionLevel === 1;
-    const indent = "--".repeat(recursionLevel);
-    console.log(indent, overrides.name, overrides, target);
-    overrides.overriddenProps.forEach((prop) => {
-    //    console.log(indent, ">>>>>> override", prop);
-       try {
-           if (prop.key in target) {
-              applyOverrideProp(prop.key, prop.to, target, isRoot);
-           }
-       } catch (e) {
-           console.log(indent, "no", e, prop);
-       }
+    let didChangeMasterComponent:boolean = false;
+    log(recursionLevel, data.name, data, target);
+    data.overriddenProps.forEach((prop) => {
+        // log([">>>>>> override", prop], recursionLevel);
+        try {
+            if (prop.key in target) {
+                if (applyOverrideProp(prop.key, prop.targetValue, target, isRoot)) {
+                    didChangeMasterComponent = true;
+                };
+            }
+        } catch (e) {
+            log(0, "Cannot apply prop", prop, e);
+        }
     });
     // recursion
-    if (overrides.childData) {
-       for (let i: number = 0; i < overrides.childData.length; i++) {
-           const childData = overrides.childData[i];
-           // find child element by corresponding position in hierarchy
-           //TODO: allow search by layer name instead
-           let targetChild: SceneNode;
-           try {
-              targetChild = target.children[i] as SceneNode;
-              applyOverridesToNode(childData, targetChild, recursionLevel + 1);
-           } catch (e) {
-              console.log(e, targetChild, i, target);
-           }
-       }
+    if (data.childData) {
+        for (let i: number = 0; i < data.childData.length; i++) {
+            const childData = data.childData[i];
+            // find child element by corresponding position in hierarchy
+            let targetChild: SceneNode;
+            try {
+                targetChild = target.children[i] as SceneNode;
+                applyOverridesToNode(childData, targetChild, recursionLevel + 1);
+            } catch (e) {
+                console.log("Error", e, "in applyOverridesToNode.");
+                console.log("   targetChild:", targetChild);
+                console.log("   in", target.children, "at", i, "on parent", target);
+            }
+        }
     }
 }
 
-/**
+/*******************************************************
  * Handle UI messages
- */
+ *******************************************************/
 figma.ui.onmessage = (msg) => {
+    if (msg.type === "initial-render") {
+        const selection: SceneNode[] = Array.from(figma.currentPage.selection);
+        figma.ui.postMessage({
+            type: "selection-validation",
+            validation: validateSelection(selection),
+        });
+        // Check for saved data
+        figma.clientStorage.getAsync("copiedOverrides")
+            .then((data) => {
+                if (data !== undefined) {
+                    figma.ui.postMessage({
+                        type: "data-verified"
+                    });
+                }
+            })
+            .catch((error) => {
+                console.log("ERROR: async", error);
+            })
+            .finally(() => {});
+    }
+
     if (msg.type === "inspect-selected") {
-       const selection: SceneNode[] = Array.from(figma.currentPage.selection);
-       let { source, target } = getOverrideDataForSelection(selection);
-       console.log("Finished inspecting selected nodes.", target.overriddenProps);
-       figma.ui.postMessage({
-           type: "inspected-data",
-           payload: { source, target },
-       });
+        const selection: SceneNode[] = Array.from(figma.currentPage.selection);
+        let { source, target } = getOverrideDataForSelection(selection);
+        console.log("Finished inspecting selected nodes.", target.overriddenProps);
+        figma.ui.postMessage({
+            type: "inspected-data",
+            payload: { source, target },
+        });
     }
 
-    if (msg.type === "save-overrides") {
-       console.log("Received override data. Saving...", msg);
-       let data: IOverrideData = msg.data;
-       figma.clientStorage.setAsync("savedOverrides", data);
-       figma.ui.postMessage({ type: "save-confirmation" });
+    if (msg.type === "copy-overrides") {
+        console.log("Received override data. Saving...", msg);
+        let data: IOverrideData = msg.data;
+        figma.clientStorage.setAsync("copiedOverrides", data);
+        figma.ui.postMessage({ type: "copy-confirmation" });
     }
 
-    if (msg.type === "apply-overrides") {
-       console.log("Received apply request. Getting node...", msg);
-       const selection: SceneNode[] = Array.from(figma.currentPage.selection);
-       const target: SceneNode = selection[0];
-       figma.clientStorage
-           .getAsync("savedOverrides")
-           .then((data) => {
-              console.log("got async data", data, "target", target);
-              applyOverridesToNode(data, target, 1);
-              // let data:IOverrideData = data as IOverrideData;
-           })
-           .catch((error) => {
-              console.log("ERROR: async", error);
-           })
-           .finally(() => {
-              console.log("Reached finally");
-              // send UI message
-           });
+    if (msg.type === "paste-overrides") {
+        console.log("Received paste request. Getting node...", msg);
+        const selection: SceneNode[] = Array.from(figma.currentPage.selection);
+        const target: SceneNode = selection[0];
+        figma.clientStorage.getAsync("copiedOverrides")
+            .then((data) => {
+                console.log("got async data", data, "target", target);
+                applyOverridesToNode(data, target, 1);
+                // let data:IOverrideData = data as IOverrideData;
+            })
+            .catch((error) => {
+                console.log("ERROR: async", error);
+            })
+            .finally(() => {
+                console.log("Reached finally");
+                // send UI message
+            });
     }
-
-    // figma.closePlugin();
 };
 
+figma.on("selectionchange", () => {
+    console.log("selection changed", figma.currentPage.selection);
+    //TODO: store selection order
+    const selection: SceneNode[] = Array.from(figma.currentPage.selection);
+    figma.ui.postMessage({
+        type: "selection-validation",
+        validation: validateSelection(selection),
+    });
+});
+
 const overridableProps = [
+    "backgrounds",
+    "backgroundStyleId",
+    "blendMode",
+    "characters",
+    "clipsContent",
+    "cornerRadius",
+    "cornerSmoothing",
+    "dashPattern",
+    "effects",
+    "effectStyleId",
+    "fontSize",
+    "fontName",
+    "fills",
+    "fillStyleId",
+    "letterSpacing",
+    "lineHeight",
+    "locked",
     "masterComponent",
     "name",
-    "locked",
     "opacity",
-    "visible",
-    "backgrounds",
-    "blendMode",
-    "clipsContent",
-    "effects",
-    "fills", // array
     "strokes",
     "strokeAlign",
     "strokeCap",
     "strokeJoin",
-    "dashPattern",
-    "cornerRadius",
-    "cornerSmoothing",
-    // text
-    "characters",
-    "textAlignHorizontal",
-    "textAlignVertical",
-    "paragraphIndent",
-    "paragraphSpacing",
-];
-
-
-// Text properties that can be overriden on individual characters
-const charOverridableProps = [
-    "fills",
-    "fillStyleId",
-    "fontSize",
-    "fontName",
+    "strokeStyleId",
     "textCase",
     "textDecoration",
-    "letterSpacing",
-    "lineHeight",
-    "textStyleId",
+    "visible",
 ];
