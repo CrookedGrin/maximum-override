@@ -66,3 +66,57 @@ export function validateSelection(selection: SceneNode[]): ISelectionValidation 
         return { isValid: true, reason: SelectionValidation.IS_TWO };
     }
 }
+
+export interface IColor {
+    r: number;
+    g: number;
+    b: number;
+}
+
+export function RGBToHex(color: IColor) {
+    let r = color.r.toString(16);
+    let g = color.g.toString(16);
+    let b = color.b.toString(16);
+    if (r.length == 1)
+        r = "0" + r;
+    if (g.length == 1)
+        g = "0" + g;
+    if (b.length == 1)
+        b = "0" + b;
+    return "#" + r + g + b;
+}
+
+export const overridableProps = [
+    // colors
+    "backgrounds",
+    "backgroundStyleId",
+    "effects",
+    "effectStyleId",
+    "fills",
+    "fillStyleId",
+    "strokes",
+    "strokeStyleId",
+
+    "blendMode",
+    "clipsContent",
+    "cornerRadius",
+    "cornerSmoothing",
+    "dashPattern",
+    "locked",
+    "masterComponent",
+    "name",
+    "opacity",
+    "strokeAlign",
+    "strokeCap",
+    "strokeJoin",
+    "visible",
+
+    // text
+    "characters",
+    "fontSize",
+    "fontName",
+    "letterSpacing",
+    "lineHeight",
+    "textCase",
+    "textDecoration",
+];

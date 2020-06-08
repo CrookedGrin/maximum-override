@@ -47,11 +47,23 @@
 
   button {
     margin-right: 8px;
+    cursor: pointer;
+
+    &:disabled {
+      cursor: default;
+    }
   }
+
 }
 
 .icon {
   background-size: contain;
+}
+
+.content {
+  background-color: var(--silver);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .header {
@@ -60,22 +72,31 @@
   align-items: center;
   font-weight: bold;
   font-size: var(--font-size-large);
-  background-color: var(--silver);
-  border-top-right-radius: 8px;
-  border-top-left-radius: 8px;
-  margin-bottom: 1px;
-  padding: 8px 14px;
-  height: 32px;
+  // border-bottom: 1px solid rgba(0,0,0,0.15);
+  background-color: rgba(0,0,0,0.1);
+  padding: 0 14px 0 0;
+  height: 36px;
   overflow: hidden;
+  cursor: pointer;
+
+  .expand-collapse {
+    margin-left: -2px;
+    margin-right: -8px;
+  }
 
   .icon {
     width: 24px;
     height: 24px;
     background-position: center;
+    pointer-events: none;
   }
 
   .arrow {
     margin: 0 4px;
+  }
+
+  &:hover {
+    background-color: rgba(0,0,0,0.15);
   }
 
 }
@@ -85,13 +106,15 @@
   font-size: var(--font-size-small);
   display: flex;
   flex-flow: row nowrap;
-  background-color: var(--grey);
-  border-bottom-right-radius: 8px;
-  border-bottom-left-radius: 8px;
-  padding: 12px 8px 16px 16px;
+  background-color: var(--silver);
+  padding: 8px 8px 16px 16px;
   height: 500px;
   overflow-y: auto;
   overflow-x: hidden;
+
+  &--collapsed {
+    display: none;
+  }
 }
 
 .node {
@@ -133,24 +156,25 @@
   }
 
   .props {
-    display: flex;
-    align-items: center;
-    flex-flow: row wrap;
-    // margin-bottom: 2px;
+    display: block;
 
     .prop {
-      display: inline-flex;
+      display: flex;
       position: relative;
       align-items: center;
-      padding: 2px 4px;
+      padding: 2px 6px;
       background: #fff;
       border-radius: 4px;
-      margin: 0 4px 4px;
+      margin: 0 8px 4px;
+      width: max-content;
+
+      &--inline {
+        display: inline-flex;
+      }
 
       .value {
         display: inline-block;
         color: var(--purple);
-        max-width: 140px;
         text-overflow: ellipsis;
         overflow: hidden;
         white-space: nowrap;
@@ -205,7 +229,7 @@
 .hasTooltip {
   cursor: default;
   transition: all 0.15s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0);
+  // box-shadow: 0 2px 4px rgba(0,0,0,0);
   
   &::after {
     content: attr(data-tooltip);
@@ -222,15 +246,17 @@
     border-radius: 4px;
     opacity: 0;
     transition: opacity 0.15s;
+    transition-delay: 0;
     pointer-events: none;
   }
   
   &:hover {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    // box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     border-radius: 4px;
     z-index: 10;
-
+    
     &::after {
+      transition-delay: 0.35s;
       opacity: 1;
     }
   }

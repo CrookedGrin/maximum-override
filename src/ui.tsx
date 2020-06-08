@@ -4,7 +4,12 @@ import './ui.scss'
 import '../dist/ui.css'
 import '../node_modules/figma-plugin-ds/dist/figma-plugin-ds.css';
 import * as MO from './code'
-import { ISelectionValidation, SelectionValidation } from './util'
+import { 
+    ISelectionValidation,
+    SelectionValidation,
+    IColor,
+    RGBToHex
+} from './util'
 
 declare function require(path: string): any
 
@@ -15,27 +20,27 @@ interface IState {
     inspectMessage: string;
     copyEnabled: boolean;
     pasteEnabled: boolean;
-    headerContent?: any;
+    swapEnabled: boolean;
+    selectionValidation: ISelectionValidation;
     diffContent?: any;
-    targetData?: MO.IOverrideData;
+    diffCollapsed: boolean;
     sourceData?: MO.IOverrideData;
+    targetData?: MO.IOverrideData;
     copyButtonMessage: string;
 }
 
-interface IColor {
-    r: number;
-    g: number;
-    b: number;
-}
 
 class App extends React.Component<IProps, IState> {
     state: IState = {
         diffContent: '',
+        diffCollapsed: false,
         inspectMessage: '',
-        headerContent: <div></div>,
         inspectEnabled: false,
         copyEnabled: false,
         pasteEnabled: false,
+        swapEnabled: false,
+        selectionValidation: undefined,
+        sourceData: undefined,
         targetData: undefined,
         copyButtonMessage: "Copy overrides",
     };
@@ -44,17 +49,16 @@ class App extends React.Component<IProps, IState> {
         window.addEventListener("message", (event) => {
             const message = event.data.pluginMessage;
             const payload = message.payload;
-            // console.log('Message receieved at UI', message);
             switch (message.type) {
                 case "selection-validation":
-                    const validation: ISelectionValidation = message.validation;
-                    let inspectMessage: string;
+                    const validation:ISelectionValidation = message.validation;
+                    let inspectMessage:string;
                     switch (validation.reason) {
                         case SelectionValidation.IS_INSTANCE:
                             inspectMessage = "Compare instance to master";
                             break;
                         case SelectionValidation.IS_TWO:
-                            inspectMessage = "Compare selected items";
+                            inspectMessage = "Compare selected";
                             break;
                         default:
                             inspectMessage = "Select items to compare";
@@ -62,6 +66,7 @@ class App extends React.Component<IProps, IState> {
                     }
                     this.setState({
                         inspectEnabled: validation.isValid,
+                        selectionValidation: validation,
                         inspectMessage
                     });
                     break;
@@ -70,11 +75,11 @@ class App extends React.Component<IProps, IState> {
                     break;
                 case "inspected-data":
                     this.setState({
-                        diffContent: this.renderNodeData(payload.target, true),
-                        headerContent: this.renderHeader(payload.source, payload.target),
+                        diffContent: this.renderDiff(payload.target, true),
                         targetData: payload.target,
                         sourceData: payload.source,
                         copyEnabled: true,
+                        swapEnabled: this.state.selectionValidation.reason === SelectionValidation.IS_TWO,
                         copyButtonMessage: "Copy overrides",
                         inspectEnabled: false
                     });
@@ -89,23 +94,73 @@ class App extends React.Component<IProps, IState> {
                     break;
             }
         });
-
         // Request selection validation
         parent.postMessage({ pluginMessage: { type: 'initial-render' } }, '*');
     }
 
-    RGBToHex = (color: IColor) => {
-        let r = color.r.toString(16);
-        let g = color.g.toString(16);
-        let b = color.b.toString(16);
-        if (r.length == 1)
-            r = "0" + r;
-        if (g.length == 1)
-            g = "0" + g;
-        if (b.length == 1)
-            b = "0" + b;
-        return "#" + r + g + b;
+
+    /**********************************
+     * Button handlers
+     **********************************/
+
+    onInspect = () => {
+        parent.postMessage({
+            pluginMessage: {
+                type: 'inspect-selected'
+            }
+        }, '*')
     }
+
+    onSwap = () => {
+        parent.postMessage({
+            pluginMessage: {
+                type: 'swap-selected',
+                data: {
+                    // Figma won't pass the whole object, so just send the ids
+                    targetId: this.state.targetData.id,
+                    sourceId: this.state.sourceData.id
+                }
+            }
+        }, '*')
+    }
+
+    onCopy = () => {
+        parent.postMessage({
+            pluginMessage: {
+                type: 'copy-overrides',
+                data: this.state.targetData,
+            }
+        }, '*')
+    }
+
+    onPaste = () => {
+        parent.postMessage({
+            pluginMessage: {
+                type: 'paste-overrides'
+            }
+        }, '*')
+    }
+
+    onExpandCollapse = () => {
+        this.setState({diffCollapsed: !this.state.diffCollapsed})
+        if (this.state.diffCollapsed) {
+            parent.postMessage({
+                pluginMessage: {
+                    type: 'collapse-ui'
+                }
+            }, '*')
+        } else {
+            parent.postMessage({
+                pluginMessage: {
+                    type: 'expand-ui'
+                }
+            }, '*')
+        }
+    }
+
+    /**********************************
+     * Rendering
+     **********************************/
 
     renderRGBColor = (paint: any) => {
         let color: IColor;
@@ -124,7 +179,7 @@ class App extends React.Component<IProps, IState> {
         if (isNone) {
             toolTip = '(None)';
         } else {
-            toolTip = this.RGBToHex(converted).toUpperCase();
+            toolTip = RGBToHex(converted).toUpperCase();
         }
         let rgbString = `rgb(${converted.r}, ${converted.g}, ${converted.b})`
         let classes = isNone ? "rgbColor rgbColor--none" : "rgbColor hasTooltip";
@@ -140,20 +195,27 @@ class App extends React.Component<IProps, IState> {
     renderOverrideProp = (prop: any) => {
         const { key, sourceValue, targetValue } = prop;
         switch (key) {
-            case 'strokes':
-            case 'fills':
             case 'backgrounds':
+            case 'effects':
+            case 'fills':
+            case 'strokes':
                 return (
-                    <span className="prop" key={key}>
+                    <span className="prop prop--inline" key={key}>
                         <span className="key">{key}:</span>
                         <span>{this.renderRGBColor(sourceValue[0])}</span>
                         <span className="arrow">→</span>
                         <span>{this.renderRGBColor(targetValue[0])}</span>
                     </span>
                 )
+            case 'backgroundStyleId':
+            case 'effectStyleId':
+            case 'fillStyleId':
+            case 'strokeStyleId':
+                // Hide these in the UI
+                return false;
             case "masterComponent":
                 return (
-                    <span className="prop" key={key}>
+                    <div className="prop" key={key}>
                         <span className="key">Master:</span>
                         <span className="hasTooltip" data-tooltip={sourceValue.name}>
                             <span className="value">{sourceValue.name}</span>
@@ -162,12 +224,12 @@ class App extends React.Component<IProps, IState> {
                         <span className="hasTooltip" data-tooltip={targetValue.name}>
                             <span className="value">{targetValue.name}</span>
                         </span>
-                    </span>
+                    </div>
                 )
             case "name":
             case "characters":
                 return (
-                    <span className="prop" key={key}>
+                    <div className="prop" key={key}>
                         <span className="key">{key}:</span>
                         <span className="hasTooltip" data-tooltip={sourceValue.toString()}>
                             <span className="value">{sourceValue.toString()}</span>
@@ -176,18 +238,36 @@ class App extends React.Component<IProps, IState> {
                         <span className="hasTooltip" data-tooltip={targetValue.toString()}>
                             <span className="value">{targetValue.toString()}</span>
                         </span>
-                    </span>
+                    </div>
+                )
+            case "fontName":
+                return (
+                    <div className="prop" key={key}>
+                        <span className="key">Font:</span>
+                        <span className="value">{sourceValue.family} {sourceValue.style}</span>
+                        <span className="arrow">→</span>
+                        <span className="value">{targetValue.family} {targetValue.style}</span>
+                    </div>
+                )
+            case "letterSpacing":
+            case "lineHeight":
+                return (
+                    <div className="prop" key={key}>
+                        <span className="key">{key}:</span>
+                        <span className="value">{sourceValue.value} {sourceValue.unit.toLowerCase()}</span>
+                        <span className="arrow">→</span>
+                        <span className="value">{targetValue.value} {targetValue.unit.toLowerCase()}</span>
+                    </div>
                 )
             default:
                 return (
-                    <span className="prop" key={key}>
+                    <div className="prop" key={key}>
                         <span className="key">{key}:</span>
                         <span className="value">{sourceValue.toString()}</span>
                         <span className="arrow">→</span>
                         <span className="value">{targetValue.toString()}</span>
-                    </span>
+                    </div>
                 )
-
         }
     }
 
@@ -210,14 +290,14 @@ class App extends React.Component<IProps, IState> {
             iconText = "T";
         }
         if (type === "VECTOR") {
-            iconType = "minus"
+            iconText = "\\";
         }
         let iconClass = `icon icon--purple icon--${iconType}`;
         return <div className={iconClass}>{iconText}</div>
     }
 
     // Recursive
-    renderNodeData = (nodeData: MO.IOverrideData, isTop: boolean) => {
+    renderDiff = (nodeData: MO.IOverrideData, isTop: boolean) => {
         const classes = isTop ? "node node--top" : "node";
         return (
             <div className={classes} key={nodeData.id.toString()}>
@@ -228,51 +308,38 @@ class App extends React.Component<IProps, IState> {
                 {nodeData.overriddenProps && this.renderOverrideProps(nodeData.overriddenProps)}
                 {nodeData.childData &&
                     nodeData.childData.map(child => {
-                        return this.renderNodeData(child, false);
+                        return this.renderDiff(child, false);
                     })
                 }
             </div>
         )
     }
 
-    renderHeader(sourceData: MO.IOverrideData, targetData: MO.IOverrideData) {
+    renderHeader() {
+        let {sourceData, targetData} = this.state;
+        if (sourceData === undefined || targetData === undefined) return false;
         return (
-            <>
+            <div className="header" onClick={this.onExpandCollapse}>
+                <div className="expand-collapse">
+                    {this.state.diffCollapsed &&
+                        <div className="icon icon--caret-right" />
+                    }
+                    {!this.state.diffCollapsed &&
+                        <div className="icon icon--caret-down" />
+                    }
+                </div>
                 <span>{this.renderNodeIcon(sourceData.type)}</span>
                 <span className="compare-node">{sourceData.name}</span>
                 <span className="arrow">→</span>
                 <span>{this.renderNodeIcon(targetData.type)}</span>
                 <span className="compare-node">{targetData.name}</span>
-            </>
+            </div>
         )
     }
 
-    onInspect = () => {
-        parent.postMessage({
-            pluginMessage: {
-                type: 'inspect-selected'
-            }
-        }, '*')
-    }
-
-    onCopy = () => {
-        parent.postMessage({
-            pluginMessage: {
-                type: 'copy-overrides',
-                data: this.state.targetData,
-            }
-        }, '*')
-    }
-
-    onPaste = () => {
-        parent.postMessage({
-            pluginMessage: {
-                type: 'paste-overrides'
-            }
-        }, '*')
-    }
 
     render() {
+        const diffClasses = this.state.diffCollapsed ? "diff diff--collapsed" : "diff";
         return (
             <>
                 <div className="MaximumOverride">
@@ -283,6 +350,13 @@ class App extends React.Component<IProps, IState> {
                             onClick={this.onInspect}
                             disabled={!this.state.inspectEnabled}>
                             {this.state.inspectMessage}
+                        </button>
+                        <button
+                            className="button button--secondary"
+                            id="swap"
+                            onClick={this.onSwap}
+                            disabled={!this.state.swapEnabled}>
+                            Swap
                         </button>
                         <button
                             className="button button--secondary"
@@ -299,20 +373,22 @@ class App extends React.Component<IProps, IState> {
                             Paste overrides
                         </button>
                     </div>
-                    <div className="header">
-                        {this.state.headerContent}
-                    </div>
-                    <div className="diff">
-                        <div className="nodes">
-                            {this.state.targetData === undefined &&
-                                <div className="emptyState">
-                                    <div className="logo" />
-                                    <p>Select one <strong>component instance</strong> to compare it against its master component</p>
-                                    <p className="centered"><strong>OR</strong></p>
-                                    <p>Select <strong>two items</strong> of any type to compare them to each other.</p>
-                                </div>
-                            }
-                            {this.state.diffContent}
+                    <div className="content">
+                        {this.renderHeader()}
+                        <div className={diffClasses}>
+                            <div className="nodes">
+                                {this.state.targetData === undefined &&
+                                    <div className="emptyState">
+                                        <div className="logo" />
+                                        <p>Select one <strong>component instance</strong> to compare it against its master component</p>
+                                        <p className="centered"><strong>OR</strong></p>
+                                        <p>Select <strong>two items</strong> of any type to compare them to each other.</p>
+                                    </div>
+                                }
+                                {this.state.targetData && 
+                                    this.renderDiff(this.state.targetData, true)
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
