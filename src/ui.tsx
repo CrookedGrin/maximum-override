@@ -22,17 +22,16 @@ interface IState {
     pasteEnabled: boolean;
     swapEnabled: boolean;
     selectionValidation: ISelectionValidation;
-    diffContent?: any;
     diffCollapsed: boolean;
     sourceData?: MO.IOverrideData;
     targetData?: MO.IOverrideData;
     copyButtonMessage: string;
+    dataVerified: boolean;
 }
 
 
 class App extends React.Component<IProps, IState> {
     state: IState = {
-        diffContent: '',
         diffCollapsed: false,
         inspectMessage: '',
         inspectEnabled: false,
@@ -43,6 +42,7 @@ class App extends React.Component<IProps, IState> {
         sourceData: undefined,
         targetData: undefined,
         copyButtonMessage: "Copy overrides",
+        dataVerified: false
     };
 
     componentDidMount = () => {
@@ -53,12 +53,18 @@ class App extends React.Component<IProps, IState> {
                 case "selection-validation":
                     const validation:ISelectionValidation = message.validation;
                     let inspectMessage:string;
+                    let canPaste: boolean = false;
                     switch (validation.reason) {
                         case SelectionValidation.IS_INSTANCE:
                             inspectMessage = "Compare instance to master";
+                            canPaste = true;
                             break;
                         case SelectionValidation.IS_TWO:
                             inspectMessage = "Compare selected";
+                            break;
+                        case SelectionValidation.IS_NODE:
+                            inspectMessage = "Select an instance";
+                            canPaste = true;
                             break;
                         default:
                             inspectMessage = "Select items to compare";
@@ -67,15 +73,17 @@ class App extends React.Component<IProps, IState> {
                     this.setState({
                         inspectEnabled: validation.isValid,
                         selectionValidation: validation,
+                        pasteEnabled: canPaste && this.state.dataVerified,
                         inspectMessage
                     });
                     break;
                 case "data-verified":
-                    this.setState({ pasteEnabled: true });
+                    this.setState({ 
+                        dataVerified: true
+                    });
                     break;
                 case "inspected-data":
                     this.setState({
-                        diffContent: this.renderDiff(payload.target, true),
                         targetData: payload.target,
                         sourceData: payload.source,
                         copyEnabled: true,

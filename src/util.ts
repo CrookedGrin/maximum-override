@@ -20,15 +20,9 @@ export function formatOverrideProp(key: string, prop: any) {
         case "fills":
         case "strokes":
             if (!Array.isArray(prop) || !prop[0]) {
-                // console.log(key, "is not an array.", prop);
                 return [];
             }
             break;
-        // case "backgroundStyleId":
-        // case "effectStyleId":
-        // case "fillStyleId":
-        // case "strokeStyleId":
-        //     return prop;
         case "masterComponent":
             return { name: prop.name, id: prop.id };
     }
@@ -38,7 +32,7 @@ export function formatOverrideProp(key: string, prop: any) {
 export enum SelectionValidation {
     NO_SELECTION = "Nothing selected",
     MORE_THAN_TWO = "More than two",
-    NOT_AN_INSTANCE = "Not an Instance",
+    IS_NODE = "Not an Instance",
     IS_INSTANCE = "One Instance",
     IS_TWO = "Two nodes",
 }
@@ -57,7 +51,7 @@ export function validateSelection(selection: SceneNode[]): ISelectionValidation 
     }
     if (selection.length === 1) {
         if (selection[0].type !== "INSTANCE") {
-            return { isValid: false, reason: SelectionValidation.NOT_AN_INSTANCE };
+            return { isValid: false, reason: SelectionValidation.IS_NODE };
         } else {
             return { isValid: true, reason: SelectionValidation.IS_INSTANCE };
         }

@@ -301,7 +301,8 @@ figma.ui.onmessage = (msg) => {
             .then((data) => {
                 if (data !== undefined) {
                     figma.ui.postMessage({
-                        type: "data-verified"
+                        type: "data-verified",
+                        validation: validateSelection(selection)
                     });
                 }
             })
@@ -337,7 +338,6 @@ figma.ui.onmessage = (msg) => {
             .then((data) => {
                 log(0, "got async data", data, "target", target);
                 applyOverridesToNode(data, target, 1);
-                // let data:IOverrideData = data as IOverrideData;
             })
             .catch((error) => {
                 log(0, "ERROR: async", error);
