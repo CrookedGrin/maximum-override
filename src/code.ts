@@ -3,7 +3,9 @@ import {
     checkEquality,
     formatOverrideProp,
     validateSelection,
-    overridableProps
+    overridableProps,
+    countChildren,
+    cacheProps
 } from './util'
 
 figma.showUI(__html__, { width: 540, height: 600 });
@@ -18,6 +20,7 @@ export interface IOverrideData {
 }
 
 let temporaryNodes:SceneNode[] = [];
+let comparedNodeCount:number = 0;
 
 /**
  * @param targetNode The node that's being recursively introspected
@@ -29,14 +32,19 @@ function getOverridesForNode(
     targetNode: SceneNode,
     recursionLevel: number
 ):any[] {
+    let start = new Date().getTime();
+    if (targetNode.type !== sourceNode.type) {
+        log(recursionLevel, "Can't compare ", sourceNode.type, " to ", targetNode.type);
+        return [];
+    }
     let logMessage = "getOverridesForNode: ";
     let overrides = [];
-    if (!checkEquality(targetNode.type, targetNode, sourceNode)) {
-        logMessage += targetNode.type + " " + targetNode.name;
-    }
-    overridableProps.forEach((key) => {
+    for (var i=0, n=overridableProps.length; i < n; ++i){
+        const key = overridableProps[i];
+        let start1 = new Date().getTime();
         if (key in targetNode && key in sourceNode) {
             if (!checkEquality(key, targetNode[key], sourceNode[key])) {
+                // console.log("================= unequal", key);
                 overrides.push({
                     key: key,
                     sourceValue: formatOverrideProp(key, sourceNode[key]),
@@ -44,7 +52,9 @@ function getOverridesForNode(
                 });
             }
         }
-    });
+        let end1 = new Date().getTime();
+        log(recursionLevel, key, end1-start1);
+    };
 
     const numOverrides = overrides.length;
     if (numOverrides > 0) {
@@ -52,9 +62,23 @@ function getOverridesForNode(
         logMessage += Object.keys(overrides).toString().replace(/,/g, ", ");
     }
 
+    let end = new Date().getTime();
+    logMessage += "(" + (end - start) + ")ms";
     log(recursionLevel, logMessage);
 
     return overrides;
+}
+
+const parentTypes = [
+    'FRAME',
+    'GROUP',
+    'INSTANCE',
+    'COMPONENT',
+    'BOOLEAN_OPERATION'
+]
+
+function supportsChildren(node:any):boolean {
+    return (parentTypes.indexOf(node.type) > -1);
 }
 
 // Recursive
@@ -63,16 +87,28 @@ function compareProps(
     targetData: IOverrideData,
     recursionLevel: number
 ) {
-    log(recursionLevel, 'compareProps', sourceData.associatedNode, targetData.associatedNode);
+    // log(recursionLevel, 'compareProps', sourceData.associatedNode, targetData.associatedNode);
 
+    let start = new Date().getTime();
     sourceData.overriddenProps = []; // Clear in case of swap
     targetData.overriddenProps = getOverridesForNode(
         sourceData.associatedNode,
         targetData.associatedNode,
         recursionLevel + 1
     );
+    let end = new Date().getTime();
+    log(recursionLevel, "compareProps time:", end - start);
 
-    if ( "children" in targetData.associatedNode && targetData.associatedNode.children.length ) {
+    comparedNodeCount++;
+    figma.ui.postMessage({
+        type: "comparison-progress",
+        comparedNodeCount
+    })
+
+    console.log('Object.keys(targetData.associatedNode)', targetData.associatedNode.type);
+    const targetNode:any = targetData.associatedNode;
+
+    if (supportsChildren(targetNode)) {
         /*
          If the target's masterComponent has changed, we need to compare against an instance
          of that master rather than the original component
@@ -98,15 +134,16 @@ function compareProps(
                 return;
             }
         }
-        const nodeChildren = targetData.associatedNode.children;
+        const nodeChildren = targetNode.children;
         let childData = [];
-        for (let i = 0; i < nodeChildren.length; i++) {
+        for (let i = 0, n = nodeChildren.length; i < n; i++) {
             const targetChild = nodeChildren[i] as SceneNode;
             const targetChildData = createDataWrapperForNode(targetChild);
-            if ("children" in sourceData.associatedNode) {
-                const sourceChild = sourceData.associatedNode.children[i] as SceneNode;
+            const sourceNode:any = sourceData.associatedNode;
+            if (supportsChildren(sourceNode)) {
+                const sourceChild = (sourceNode as any).children[i];
                 if (sourceChild === undefined) {
-                    log(recursionLevel + 1, 'sourceChild at ', i, 'is undefined in', sourceData.associatedNode.children);
+                    log(recursionLevel + 1, 'sourceChild at ', i, 'is undefined in', sourceNode.children);
                     break;
                 }
                 const sourceChildData = createDataWrapperForNode(sourceChild);
@@ -253,15 +290,12 @@ function applyOverridesToNode(
     recursionLevel: number
 ) {
     const isRoot = recursionLevel === 1;
-    let didChangeMasterComponent:boolean = false;
     log(recursionLevel, 'applyOverridesToNode', data.name, data, target);
     data.overriddenProps.forEach((prop) => {
         // log(recursionLevel, ">>>>>> override", prop);
         try {
             if (prop.key in target) {
-                if (applyOverrideProp(prop.key, prop.targetValue, target, isRoot)) {
-                    didChangeMasterComponent = true;
-                };
+                applyOverrideProp(prop.key, prop.targetValue, target, isRoot)
             }
         } catch (e) {
             log(0, "Cannot apply prop", prop, e);
@@ -312,13 +346,26 @@ figma.ui.onmessage = (msg) => {
             .finally(() => {});
     }
 
-    if (msg.type === "inspect-selected") {
+    if (msg.type === "compare-selected") {
+
         const selection: SceneNode[] = Array.from(figma.currentPage.selection);
         let { sourceData, targetData } = getSourceAndTargetFromSelection(selection);
-        let { source, target } = getOverrideDataForNodes(sourceData, targetData);
-        log(0, "Finished inspecting selected nodes.", target);
+        const childCount = countChildren(targetData.associatedNode);
+
+        let start = new Date().getTime();
+
         figma.ui.postMessage({
-            type: "inspected-data",
+            type: "comparison-started",
+            totalNodeCount: childCount
+        });
+        let { source, target } = getOverrideDataForNodes(sourceData, targetData);
+        // let cache = cacheProps(targetData.associatedNode);
+        let end = new Date().getTime();
+        // log(0, end-start, cache);
+        log(0, "Finished inspecting selected nodes.", target, end - start);
+
+        figma.ui.postMessage({
+            type: "comparison-finished",
             payload: { source, target },
         });
     }
@@ -352,7 +399,7 @@ figma.ui.onmessage = (msg) => {
         let { source, target } = getOverrideDataForNodes(originalTarget, originalSource);
         log(0, "Finished inspecting swapped nodes.", target);
         figma.ui.postMessage({
-            type: "inspected-data",
+            type: "comparison-finished",
             payload: { source, target },
         });
     }

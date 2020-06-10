@@ -27,6 +27,9 @@ interface IState {
     targetData?: MO.IOverrideData;
     copyButtonMessage: string;
     dataVerified: boolean;
+    totalNodeCount: number;
+    comparedNodeCount: number;
+    comparisonInProgress: boolean;
 }
 
 
@@ -42,7 +45,10 @@ class App extends React.Component<IProps, IState> {
         sourceData: undefined,
         targetData: undefined,
         copyButtonMessage: "Copy overrides",
-        dataVerified: false
+        dataVerified: false,
+        totalNodeCount: 0,
+        comparedNodeCount: 0,
+        comparisonInProgress: false
     };
 
     componentDidMount = () => {
@@ -74,22 +80,39 @@ class App extends React.Component<IProps, IState> {
                         inspectEnabled: validation.isValid,
                         selectionValidation: validation,
                         pasteEnabled: canPaste && this.state.dataVerified,
-                        inspectMessage
+                        inspectMessage,
+                        totalNodeCount: validation.childCount
                     });
                     break;
                 case "data-verified":
-                    this.setState({ 
+                    this.setState({
                         dataVerified: true
                     });
                     break;
-                case "inspected-data":
+                case "comparison-started":
+                    console.log('============== Received comparison-started', message.totalNodeCount);
+                    this.setState({
+                        totalNodeCount: message.totalNodeCount,
+                        comparedNodeCount: 0,
+                        comparisonInProgress: true
+                    });
+                    break;
+                case "comparison-progress":
+                    console.log('==================== Received comparison-progress', message.comparedNodeCount);
+                    this.setState({
+                        comparedNodeCount: message.comparedNodeCount
+                    });
+                    break;
+                case "comparison-finished":
+                    console.log('============== Received comparison-finished');
                     this.setState({
                         targetData: payload.target,
                         sourceData: payload.source,
                         copyEnabled: true,
                         swapEnabled: this.state.selectionValidation.reason === SelectionValidation.IS_TWO,
                         copyButtonMessage: "Copy overrides",
-                        inspectEnabled: false
+                        inspectEnabled: false,
+                        comparisonInProgress: false
                     });
                     break;
                 case "copy-confirmation":
@@ -112,11 +135,17 @@ class App extends React.Component<IProps, IState> {
      **********************************/
 
     onInspect = () => {
-        parent.postMessage({
-            pluginMessage: {
-                type: 'inspect-selected'
-            }
-        }, '*')
+        this.setState({
+            comparisonInProgress: true
+        }, () => {
+            this.forceUpdate(() => {
+                parent.postMessage({
+                    pluginMessage: {
+                        type: 'compare-selected'
+                    }
+                }, '*')
+            });
+        });
     }
 
     onSwap = () => {
@@ -324,7 +353,15 @@ class App extends React.Component<IProps, IState> {
     }
 
     renderHeader() {
-        let {sourceData, targetData} = this.state;
+        console.log('renderHeader', this.state.comparisonInProgress);
+        let {sourceData, targetData, comparisonInProgress} = this.state;
+        if (comparisonInProgress) {
+            return (
+                <div className="header">
+                    <span>{this.state.comparedNodeCount} of {this.state.totalNodeCount}</span>
+                </div>
+            )
+        }
         if (sourceData === undefined || targetData === undefined) return false;
         return (
             <div className="header" onClick={this.onExpandCollapse}>

@@ -1,6 +1,9 @@
 import equal from 'deep-equal';
 
+const env = process.env.NODE_ENV;
+
 export function log(indentLevel:number = 0, ...args) {
+    if (env !== "development") return;
     let indent:string = "──".repeat(indentLevel) + " ";
     console.log(indent, ...args);
 }
@@ -12,6 +15,7 @@ export function checkEquality(key: string, sourceValue: any, targetValue: any) {
         default:
             return equal(sourceValue, targetValue);
     }
+
 }
 
 export function formatOverrideProp(key: string, prop: any) {
@@ -40,6 +44,35 @@ export enum SelectionValidation {
 export interface ISelectionValidation {
     isValid: boolean;
     reason?: SelectionValidation;
+    childCount?: number;
+}
+
+export function countChildren(node:any):number {
+    let counter:number = 0;
+    if (node.children) {
+        node.children.forEach((child) => {
+            counter++;
+            counter += countChildren(child);
+        })
+    }
+    return counter;
+}
+
+export function cacheProps(node:any):any {
+    let props:any = {};
+    for (let i=0, n=overridableProps.length; i < n; i++) {
+        const key = overridableProps[i];
+        if (key in node) {
+            props[key] = node[key];
+        }
+    }
+    if (node.children) {
+        for (let j=0, n2=node.children.length; j < n2; j++) {
+            const childKey = 'child' + j;
+            props[childKey] = cacheProps(node.children[j]);
+        };
+    }
+    return props;
 }
 
 export function validateSelection(selection: SceneNode[]): ISelectionValidation {
@@ -50,14 +83,20 @@ export function validateSelection(selection: SceneNode[]): ISelectionValidation 
         return { isValid: false, reason: SelectionValidation.MORE_THAN_TWO };
     }
     if (selection.length === 1) {
+        let start = new Date().getTime();
+        let childCount = countChildren(selection[0]);
+        let end = new Date().getTime();
+        console.log(end - start);
+        
         if (selection[0].type !== "INSTANCE") {
-            return { isValid: false, reason: SelectionValidation.IS_NODE };
+            return { isValid: false, reason: SelectionValidation.IS_NODE, childCount };
         } else {
-            return { isValid: true, reason: SelectionValidation.IS_INSTANCE };
+            return { isValid: true, reason: SelectionValidation.IS_INSTANCE, childCount };
         }
     }
     if (selection.length === 2) {
-        return { isValid: true, reason: SelectionValidation.IS_TWO };
+        let childCount = countChildren(selection[0]);
+        return { isValid: true, reason: SelectionValidation.IS_TWO, childCount };
     }
 }
 
