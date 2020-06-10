@@ -89,20 +89,6 @@ class App extends React.Component<IProps, IState> {
                         dataVerified: true
                     });
                     break;
-                case "comparison-started":
-                    console.log('============== Received comparison-started', message.totalNodeCount);
-                    this.setState({
-                        totalNodeCount: message.totalNodeCount,
-                        comparedNodeCount: 0,
-                        comparisonInProgress: true
-                    });
-                    break;
-                case "comparison-progress":
-                    console.log('==================== Received comparison-progress', message.comparedNodeCount);
-                    this.setState({
-                        comparedNodeCount: message.comparedNodeCount
-                    });
-                    break;
                 case "comparison-finished":
                     console.log('============== Received comparison-finished');
                     this.setState({
@@ -126,7 +112,16 @@ class App extends React.Component<IProps, IState> {
             }
         });
         // Request selection validation
-        parent.postMessage({ pluginMessage: { type: 'initial-render' } }, '*');
+        parent.postMessage({ 
+            pluginMessage: { type: 'initial-render' } 
+        }, '*');
+
+        // parent.postMessage({
+        //     pluginMessage: {
+        //         type: 'compare-selected'
+        //     }
+        // }, '*')
+
     }
 
 
@@ -327,7 +322,7 @@ class App extends React.Component<IProps, IState> {
             iconText = "T";
         }
         if (type === "VECTOR") {
-            iconText = "\\";
+            iconText = "▱";
         }
         let iconClass = `icon icon--purple icon--${iconType}`;
         return <div className={iconClass}>{iconText}</div>
@@ -353,16 +348,15 @@ class App extends React.Component<IProps, IState> {
     }
 
     renderHeader() {
-        console.log('renderHeader', this.state.comparisonInProgress);
         let {sourceData, targetData, comparisonInProgress} = this.state;
         if (comparisonInProgress) {
             return (
-                <div className="header">
-                    <span>{this.state.comparedNodeCount} of {this.state.totalNodeCount}</span>
+                <div className="header header--loading">
+                    <span>Comparing {this.state.totalNodeCount} nodes...</span>
                 </div>
             )
         }
-        if (sourceData === undefined || targetData === undefined) return false;
+        if (sourceData === undefined || targetData === undefined) return <div className="header" />
         return (
             <div className="header" onClick={this.onExpandCollapse}>
                 <div className="expand-collapse">

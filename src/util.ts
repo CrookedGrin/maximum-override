@@ -8,7 +8,20 @@ export function log(indentLevel:number = 0, ...args) {
     console.log(indent, ...args);
 }
 
+const parentTypes = [
+    'FRAME',
+    'GROUP',
+    'INSTANCE',
+    'COMPONENT',
+    'BOOLEAN_OPERATION'
+]
+
+export function supportsChildren(node:any):boolean {
+    return (parentTypes.indexOf(node.type) > -1);
+}
+
 export function checkEquality(key: string, sourceValue: any, targetValue: any) {
+    if (sourceValue === undefined && targetValue === undefined) return true;
     switch (key) {
         case "masterComponent":
             return sourceValue.id === targetValue.id;
@@ -58,14 +71,70 @@ export function countChildren(node:any):number {
     return counter;
 }
 
+export function getPropsFromNode(node:any):any {
+    let props:any = {};
+    props.backgrounds = node.backgrounds;
+    props.backgroundStyleId = node.backgroundStyleId;
+    props.effects = node.effects;
+    props.effectStyleId = node.effectStyleId;
+    props.fills = node.fills;
+    props.fillStyleId = node.fillStyleId;
+    props.strokes = node.strokes;
+    props.strokeStyleId = node.strokeStyleId;
+    props.blendMode = node.blendMode;
+    props.clipsContent = node.clipsContent;
+    props.cornerRadius = node.cornerRadius;
+    props.cornerSmoothing = node.cornerSmoothing;
+    props.dashPattern = node.dashPattern;
+    props.locked = node.locked;
+    props.masterComponent = node.masterComponent;
+    props.name = node.name;
+    props.opacity = node.opacity;
+    props.strokeAlign = node.strokeAlign;
+    props.strokeCap = node.strokeCap;
+    props.strokeJoin = node.strokeJoin;
+    props.visible = node.visible;
+    props.characters = node.characters;
+    props.fontSize = node.fontSize;
+    props.fontName = node.fontName;
+    props.letterSpacing = node.letterSpacing;
+    props.lineHeight = node.lineHeight;
+    props.textCase = node.textCase;
+    props.textDecoration = node.textDecoration;
+    return props;
+}
+
 export function cacheProps(node:any):any {
     let props:any = {};
-    for (let i=0, n=overridableProps.length; i < n; i++) {
-        const key = overridableProps[i];
-        if (key in node) {
-            props[key] = node[key];
-        }
-    }
+    props.backgrounds = node.backgrounds;
+    props.backgroundStyleId = node.backgroundStyleId;
+    props.effects = node.effects;
+    props.effectStyleId = node.effectStyleId;
+    props.fills = node.fills;
+    props.fillStyleId = node.fillStyleId;
+    props.strokes = node.strokes;
+    props.strokeStyleId = node.strokeStyleId;
+    props.blendMode = node.blendMode;
+    props.clipsContent = node.clipsContent;
+    props.cornerRadius = node.cornerRadius;
+    props.cornerSmoothing = node.cornerSmoothing;
+    props.dashPattern = node.dashPattern;
+    props.locked = node.locked;
+    props.masterComponent = node.masterComponent;
+    props.name = node.name;
+    props.opacity = node.opacity;
+    props.strokeAlign = node.strokeAlign;
+    props.strokeCap = node.strokeCap;
+    props.strokeJoin = node.strokeJoin;
+    props.visible = node.visible;
+    props.characters = node.characters;
+    props.fontSize = node.fontSize;
+    props.fontName = node.fontName;
+    props.letterSpacing = node.letterSpacing;
+    props.lineHeight = node.lineHeight;
+    props.textCase = node.textCase;
+    props.textDecoration = node.textDecoration;
+
     if (node.children) {
         for (let j=0, n2=node.children.length; j < n2; j++) {
             const childKey = 'child' + j;
@@ -153,3 +222,5 @@ export const overridableProps = [
     "textCase",
     "textDecoration",
 ];
+
+
