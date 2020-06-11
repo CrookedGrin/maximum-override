@@ -301,6 +301,7 @@ function applyOverridesToNode(
  *******************************************************/
 
 figma.ui.onmessage = (msg) => {
+    debugger;
     if (msg.type === "initial-render") {
         const selection: SceneNode[] = Array.from(figma.currentPage.selection);
         figma.ui.postMessage({

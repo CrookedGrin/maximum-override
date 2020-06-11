@@ -3,9 +3,14 @@ const HtmlWebpackPlugin = require('html-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const path = require('path')
 const isDevelopment = process.env.NODE_ENV === 'development'
+const webpack = require('webpack')
 
 module.exports = (env, argv) => ({
   mode: argv.mode === 'production' ? 'production' : 'development',
+
+  node: {
+    global: true
+  },
 
   // This is necessary because Figma's 'eval' works differently than normal eval
   devtool: argv.mode === 'production' ? false : 'inline-source-map',
@@ -53,6 +58,9 @@ module.exports = (env, argv) => ({
 
   // Tells Webpack to generate "ui.html" and to inline "ui.ts" into it
   plugins: [
+    new webpack.DefinePlugin({
+      'global': {} // Fix missing symbol error when running in developer VM
+    }),
     new HtmlWebpackPlugin({
       template: './src/ui.html',
       filename: 'ui.html',
