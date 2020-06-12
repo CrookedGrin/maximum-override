@@ -18,7 +18,7 @@ Two of Figma's greatest strengths are:
 
 But when you swap an instance, you lose all the overrides you've made, including changes to nested instances within a parent component.
 
-Maximum Override allows you to copy your overrides, swap out an instance, and then paste the overrides back onto the new instance, to retain all of your changes.
+Maximum Override allows you to copy your overrides, swap out an instance, and then paste the overrides back onto the new instance, to retain all of your changes. This includes nested instances that you've swapped with a different symbol.
 
 
 ### **Compare properties between objects**
@@ -40,7 +40,7 @@ Select a single component instance to compare it against its own master componen
 
 Select two items to compare them to each other. These can be any type of object on stage, including instances. Click "Swap" to change which is the source and which is the target of the overrides.
 
-By default, Maximum Override will collapse all the nodes have no overrides, but you can click the title of any node to expand and see its children.
+By default, Maximum Override will collapse all the nodes that don't contain overrides, but you can click the title of any node to expand and see its children.
 
 To save space while you work, you can also collapse the header, and the interface window will collapse as well.
 
