@@ -90,7 +90,6 @@ class App extends React.Component<IProps, IState> {
                     });
                     break;
                 case "comparison-finished":
-                    console.log('============== Received comparison-finished');
                     this.setState({
                         targetData: payload.target,
                         sourceData: payload.source,
