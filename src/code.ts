@@ -5,22 +5,17 @@ import {
     validateSelection,
     supportsChildren,
     countChildren,
-    getPropsFromNode
+    getPropsFromNode,
+    IOverrideData,
+    createDataWrapperForNode
 } from './util'
 
 figma.showUI(__html__, { width: 540, height: 600 });
 
-export interface IOverrideData {
-    name: string;
-    type: string;
-    id?: string;
-    associatedNode?: SceneNode;
-    overriddenProps?: any[];
-    childData?: IOverrideData[];
-}
-
 let temporaryNodes:SceneNode[] = [];
+let dataById:{[id:string]:IOverrideData};
 let comparedNodeCount:number = 0;
+let hasOverrides:IOverrideData[] = [];
 
 /**
  * @param targetNode The node that's being recursively introspected
@@ -37,9 +32,7 @@ function getOverridesForNode(
         log(recursionLevel, "Can't compare ", sourceNode.type, " to ", targetNode.type);
         return [];
     }
-    let logMessage = "getOverridesForNode: ";
     let overrides = [];
-
     let targetProps = getPropsFromNode(targetNode);
     let sourceProps = getPropsFromNode(sourceNode);
     for (const key in targetProps) {
@@ -51,16 +44,6 @@ function getOverridesForNode(
             });
         }
     }
-
-    const numOverrides = overrides.length;
-    if (numOverrides > 0) {
-        logMessage += " ::: " + numOverrides + " overrides: ";
-    }
-
-    // let end = new Date().getTime();
-    // logMessage += "(" + (end - start) + ")ms";
-    // log(recursionLevel, logMessage);
-
     return overrides;
 }
 
@@ -70,50 +53,49 @@ function compareProps(
     targetData: IOverrideData,
     recursionLevel: number
 ) {
-    // log(recursionLevel, 'compareProps', sourceData.associatedNode, targetData.associatedNode);
-
-    // let start = new Date().getTime();
     sourceData.overriddenProps = []; // Clear in case of swap
     targetData.overriddenProps = getOverridesForNode(
         sourceData.associatedNode,
         targetData.associatedNode,
         recursionLevel + 1
     );
-    // let end = new Date().getTime();
-    // log(recursionLevel, "compareProps time:", end - start);
-
     const targetNode:any = targetData.associatedNode;
-    if (supportsChildren(targetNode)) {
+    if (targetData.overriddenProps.length > 0) {
+        hasOverrides.push(targetData);
+    }
         /*
          If the target's masterComponent has changed, we need to compare against an instance
          of that master rather than the original component
          TODO: make this toggleable?
         */
-        let newMaster:boolean;
-        targetData.overriddenProps.forEach((prop) => {
-            if (prop.key === 'masterComponent') newMaster = true;
-        });
-        if (newMaster) {
-            let component = ((targetData.associatedNode as InstanceNode).masterComponent as ComponentNode);
-            if (component.remote) {
-                log(recursionLevel + 1, "Remote component detected. Key:", component.key);
-            }
-            try {
-                let newSourceNode:SceneNode = component.createInstance();
-                let newSourceData:IOverrideData = createDataWrapperForNode(newSourceNode);
-                log(recursionLevel, 'New Master', newSourceNode.name, newSourceData);
-                sourceData = newSourceData;
-                temporaryNodes.push(newSourceNode);
-            } catch(e) {
-                log(recursionLevel + 1, "Couldn't create an instance. Is this a nested master component?", e);
-                return;
-            }
+    let hasNewMaster:boolean;
+    targetData.overriddenProps.forEach((prop) => {
+        if (prop.key === 'masterComponent') hasNewMaster = true;
+    });
+    if (hasNewMaster) {
+        let component = ((targetData.associatedNode as InstanceNode).masterComponent as ComponentNode);
+        if (component.remote) {
+            log(recursionLevel + 1, "Remote component detected. Key:", component.key);
         }
+        try {
+            let newSourceNode:SceneNode = component.createInstance();
+            let newSourceData:IOverrideData = createDataWrapperForNode(newSourceNode);
+            log(recursionLevel, 'New Master', newSourceNode.name, newSourceData);
+            sourceData = newSourceData;
+            temporaryNodes.push(newSourceNode);
+        } catch(e) {
+            log(recursionLevel + 1, "Couldn't create an instance. Is this a nested master component?", e);
+            return;
+        }
+    }
+
+    if (supportsChildren(targetNode)) {
         const nodeChildren = targetNode.children;
         let childData = [];
         for (let i = 0, n = nodeChildren.length; i < n; i++) {
             const targetChild = nodeChildren[i] as SceneNode;
             const targetChildData = createDataWrapperForNode(targetChild);
+            targetChildData.parentId = targetData.id;
             const sourceNode:any = sourceData.associatedNode;
             if (supportsChildren(sourceNode)) {
                 const sourceChild = (sourceNode as any).children[i];
@@ -122,6 +104,7 @@ function compareProps(
                     break;
                 }
                 const sourceChildData = createDataWrapperForNode(sourceChild);
+                sourceChildData.parentId = sourceData.id;
                 compareProps(sourceChildData, targetChildData, recursionLevel + 1);
                 childData.push(targetChildData);
             } else {
@@ -132,16 +115,7 @@ function compareProps(
     }
 
     comparedNodeCount++;
-}
-
-function createDataWrapperForNode(node: SceneNode): IOverrideData {
-    let data: IOverrideData = {
-        name: node.name,
-        type: node.type,
-        id: node.id,
-        associatedNode: node,
-    };
-    return data;
+    dataById[targetData.id] = targetData;
 }
 
 function cleanUpTemporaryNodes() {
@@ -180,8 +154,20 @@ function getSourceAndTargetFromSelection(selection: SceneNode[]):any {
     return {targetData, sourceData}
 }
 
+function expandParents(data:IOverrideData) {
+    data.isCollapsed = false;
+    if (data.parentId) {
+        const parent = dataById[data.parentId];
+        expandParents(parent);
+    }
+}
+
+
 function getOverrideDataForNodes(sourceData:IOverrideData, targetData:IOverrideData) {
+    hasOverrides = [];
+    dataById = {};
     compareProps(sourceData, targetData, 1);
+    hasOverrides.forEach((data) => expandParents(data));
     let returnData = {
         source: sourceData,
         target: targetData,
@@ -301,7 +287,6 @@ function applyOverridesToNode(
  *******************************************************/
 
 figma.ui.onmessage = (msg) => {
-    debugger;
     if (msg.type === "initial-render") {
         const selection: SceneNode[] = Array.from(figma.currentPage.selection);
         figma.ui.postMessage({
@@ -325,14 +310,10 @@ figma.ui.onmessage = (msg) => {
     }
 
     if (msg.type === "compare-selected") {
-
         const selection: SceneNode[] = Array.from(figma.currentPage.selection);
-
         let start = new Date().getTime();
-        
         let { sourceData, targetData } = getSourceAndTargetFromSelection(selection);        
         let { source, target } = getOverrideDataForNodes(sourceData, targetData);
-        
         let end = new Date().getTime();
         log(0, "Finished inspecting selected nodes.", target, end - start);
 

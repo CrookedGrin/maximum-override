@@ -8,6 +8,28 @@ export function log(indentLevel:number = 0, ...args) {
     console.log(indent, ...args);
 }
 
+export interface IOverrideData {
+    name: string;
+    type: string;
+    id: string;
+    associatedNode: SceneNode;
+    overriddenProps?: any[];
+    childData?: IOverrideData[];
+    isCollapsed?: boolean;
+    parentId?: string;
+}
+
+export function createDataWrapperForNode(node: SceneNode): IOverrideData {
+    let data: IOverrideData = {
+        name: node.name,
+        type: node.type,
+        id: node.id,
+        associatedNode: node,
+        isCollapsed: true, // collapsed by default; recursively set to false if overrides exist
+    };
+    return data;
+}
+
 const parentTypes = [
     'FRAME',
     'GROUP',
@@ -28,7 +50,6 @@ export function checkEquality(key: string, sourceValue: any, targetValue: any) {
         default:
             return equal(sourceValue, targetValue);
     }
-
 }
 
 export function formatOverrideProp(key: string, prop: any) {
@@ -46,20 +67,6 @@ export function formatOverrideProp(key: string, prop: any) {
     return prop;
 }
 
-export enum SelectionValidation {
-    NO_SELECTION = "Nothing selected",
-    MORE_THAN_TWO = "More than two",
-    IS_NODE = "Not an Instance",
-    IS_INSTANCE = "One Instance",
-    IS_TWO = "Two nodes",
-}
-
-export interface ISelectionValidation {
-    isValid: boolean;
-    reason?: SelectionValidation;
-    childCount?: number;
-}
-
 export function countChildren(node:any):number {
     let counter:number = 0;
     if (node.children) {
@@ -71,6 +78,10 @@ export function countChildren(node:any):number {
     return counter;
 }
 
+/**
+ * NOTE: Using the explicit property names like this is many, many times
+ * faster than an iterated string-based property lookup like node[key].
+ */
 export function getPropsFromNode(node:any):any {
     let props:any = {};
     props.backgrounds = node.backgrounds;
@@ -104,44 +115,18 @@ export function getPropsFromNode(node:any):any {
     return props;
 }
 
-export function cacheProps(node:any):any {
-    let props:any = {};
-    props.backgrounds = node.backgrounds;
-    props.backgroundStyleId = node.backgroundStyleId;
-    props.effects = node.effects;
-    props.effectStyleId = node.effectStyleId;
-    props.fills = node.fills;
-    props.fillStyleId = node.fillStyleId;
-    props.strokes = node.strokes;
-    props.strokeStyleId = node.strokeStyleId;
-    props.blendMode = node.blendMode;
-    props.clipsContent = node.clipsContent;
-    props.cornerRadius = node.cornerRadius;
-    props.cornerSmoothing = node.cornerSmoothing;
-    props.dashPattern = node.dashPattern;
-    props.locked = node.locked;
-    props.masterComponent = node.masterComponent;
-    props.name = node.name;
-    props.opacity = node.opacity;
-    props.strokeAlign = node.strokeAlign;
-    props.strokeCap = node.strokeCap;
-    props.strokeJoin = node.strokeJoin;
-    props.visible = node.visible;
-    props.characters = node.characters;
-    props.fontSize = node.fontSize;
-    props.fontName = node.fontName;
-    props.letterSpacing = node.letterSpacing;
-    props.lineHeight = node.lineHeight;
-    props.textCase = node.textCase;
-    props.textDecoration = node.textDecoration;
+export enum SelectionValidation {
+    NO_SELECTION = "Nothing selected",
+    MORE_THAN_TWO = "More than two",
+    IS_NODE = "Not an Instance",
+    IS_INSTANCE = "One Instance",
+    IS_TWO = "Two nodes",
+}
 
-    if (node.children) {
-        for (let j=0, n2=node.children.length; j < n2; j++) {
-            const childKey = 'child' + j;
-            props[childKey] = cacheProps(node.children[j]);
-        };
-    }
-    return props;
+export interface ISelectionValidation {
+    isValid: boolean;
+    reason?: SelectionValidation;
+    childCount?: number;
 }
 
 export function validateSelection(selection: SceneNode[]): ISelectionValidation {

@@ -3,11 +3,11 @@ import * as ReactDOM from 'react-dom'
 import './ui.scss'
 import '../dist/ui.css'
 import '../node_modules/figma-plugin-ds/dist/figma-plugin-ds.css';
-import * as MO from './code'
 import { 
     ISelectionValidation,
     SelectionValidation,
     IColor,
+    IOverrideData,
     RGBToHex
 } from './util'
 
@@ -23,8 +23,8 @@ interface IState {
     swapEnabled: boolean;
     selectionValidation: ISelectionValidation;
     diffCollapsed: boolean;
-    sourceData?: MO.IOverrideData;
-    targetData?: MO.IOverrideData;
+    sourceData?: IOverrideData;
+    targetData?: IOverrideData;
     copyButtonMessage: string;
     dataVerified: boolean;
     totalNodeCount: number;
@@ -116,12 +116,12 @@ class App extends React.Component<IProps, IState> {
             pluginMessage: { type: 'initial-render' } 
         }, '*');
 
+        // TEST - compare on initial load (assumes selection)
         // parent.postMessage({
         //     pluginMessage: {
         //         type: 'compare-selected'
         //     }
         // }, '*')
-
     }
 
 
@@ -318,30 +318,68 @@ class App extends React.Component<IProps, IState> {
     renderNodeIcon = (type: string) => {
         let iconText: string = "";
         let iconType = type.toLowerCase();
-        if (type === "TEXT") {
-            iconText = "T";
-        }
-        if (type === "VECTOR") {
-            iconText = "▱";
+        switch (type) {
+            case "TEXT":
+                iconText = "T";
+                break;
+            case "VECTOR":
+                iconText = "▱";
+                break;
+            case "ELLIPSE":
+                iconText = "○";
+                break;
+            case "RECTANGLE":
+                iconText = "▭";
+                break;
         }
         let iconClass = `icon icon--purple icon--${iconType}`;
         return <div className={iconClass}>{iconText}</div>
     }
 
+    toggleNode = (nodeData: IOverrideData) => {
+        console.log('toggle', nodeData);
+        nodeData.isCollapsed = !nodeData.isCollapsed;
+        this.forceUpdate();
+    }
+
     // Recursive
-    renderDiff = (nodeData: MO.IOverrideData, isTop: boolean) => {
-        const classes = isTop ? "node node--top" : "node";
+    renderDiff = (nodeData: IOverrideData, isTop: boolean) => {
+        let classes = isTop ? "node node--top" : "node";
+        const isCollapsible = nodeData.childData || nodeData.overriddenProps.length > 0;
+        const titleClasses = isCollapsible ? "title title--collapsible" : "title";
         return (
             <div className={classes} key={nodeData.id.toString()}>
-                <span className="title">
+                <span className={titleClasses} onClick={() => this.toggleNode(nodeData)}>
+                    {isCollapsible &&
+                        this.renderCaret(nodeData.isCollapsed)
+                    }
                     {this.renderNodeIcon(nodeData.type)}
                     {nodeData.name}
                 </span>
-                {nodeData.overriddenProps && this.renderOverrideProps(nodeData.overriddenProps)}
-                {nodeData.childData &&
-                    nodeData.childData.map(child => {
-                        return this.renderDiff(child, false);
-                    })
+                {!nodeData.isCollapsed && (
+                    <>
+                        {nodeData.overriddenProps &&
+                            this.renderOverrideProps(nodeData.overriddenProps)
+                        }
+                        {nodeData.childData &&
+                            nodeData.childData.map(child => {
+                                return this.renderDiff(child, false);
+                            })
+                        }
+                    </>
+                )}
+            </div>
+        )
+    }
+
+    renderCaret(isCollapsed:boolean) {
+        return (
+            <div className="expand-collapse">
+                {isCollapsed &&
+                    <div className="icon icon--caret-right" />
+                }
+                {!isCollapsed &&
+                    <div className="icon icon--caret-down" />
                 }
             </div>
         )
@@ -359,14 +397,7 @@ class App extends React.Component<IProps, IState> {
         if (sourceData === undefined || targetData === undefined) return <div className="header" />
         return (
             <div className="header" onClick={this.onExpandCollapse}>
-                <div className="expand-collapse">
-                    {this.state.diffCollapsed &&
-                        <div className="icon icon--caret-right" />
-                    }
-                    {!this.state.diffCollapsed &&
-                        <div className="icon icon--caret-down" />
-                    }
-                </div>
+                {this.renderCaret(this.state.diffCollapsed)}
                 <span>{this.renderNodeIcon(sourceData.type)}</span>
                 <span className="compare-node">{sourceData.name}</span>
                 <span className="arrow">→</span>
