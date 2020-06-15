@@ -237,7 +237,8 @@ function applyOverrideProp(
                     log(0, "Multiple font attributes detected within ", target.name);
                     return false;
                 }
-                figma.loadFontAsync(fontName as FontName).then((data) => {
+                let font = (prop as FontName);
+                figma.loadFontAsync(font).then((data) => {
                     (textNode as any)[key] = prop;
                 });
             }
