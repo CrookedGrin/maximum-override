@@ -4,13 +4,15 @@
 
 ### Take control of your Figma overrides!
 
+Compare objects to see what's different, then copy and paste the changes. Compare instances to their default master symbol and copy and paste the overrides.
+
 <br />
 
 ---
 
 ## Features
 
-### **Copy and paste instance overrides**
+### **1. Copy and paste overrides between symbols**
 
 Two of Figma's greatest strengths are:
 1. Overriding colors, text, and other properties on component instances, and 
@@ -21,9 +23,9 @@ But when you swap an instance, you lose all the overrides you've made, including
 Maximum Override allows you to copy your overrides, swap out an instance, and then paste the overrides back onto the new instance, to retain all of your changes. This includes nested instances that you've swapped with a different symbol.
 
 
-### **Compare properties between objects**
+### **2. Compare properties between objects**
 
-Maximum Override also allows you to select any two nodes on the stage and compare them against each other to see what's different. (In software, this is known as a "diff".) You can then copy the changes from object A to object B, or vice-versa.
+Maximum Override also allows you to select any two nodes on the stage and compare them against each other to see what's different. (In software, this is known as a "diff".) You can then copy the changes from object A to object B, or vice-versa. If you select a single instance, Maximum Override will compare it against its own master component.
 
 <br/>
 

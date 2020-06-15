@@ -154,11 +154,13 @@ function getSourceAndTargetFromSelection(selection: SceneNode[]):any {
     return {targetData, sourceData}
 }
 
+// Recursive (in reverse)
 function expandParents(data:IOverrideData) {
     data.isCollapsed = false;
     if (data.parentId) {
         const parent = dataById[data.parentId];
-        expandParents(parent);
+        // if the parent has already been expanded, stop here
+        if (parent.isCollapsed) expandParents(parent);
     }
 }
 

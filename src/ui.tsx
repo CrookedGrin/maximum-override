@@ -336,7 +336,6 @@ class App extends React.Component<IProps, IState> {
     }
 
     toggleNode = (nodeData: IOverrideData) => {
-        console.log('toggle', nodeData);
         nodeData.isCollapsed = !nodeData.isCollapsed;
         this.forceUpdate();
     }
