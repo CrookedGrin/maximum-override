@@ -60,6 +60,7 @@ class App extends React.Component<IProps, IState> {
                     const validation:ISelectionValidation = message.validation;
                     let inspectMessage:string;
                     let canPaste: boolean = false;
+
                     console.log('selection-validation', message.validation);
                     switch (validation.reason) {
                         case SelectionValidation.IS_INSTANCE:
@@ -68,6 +69,7 @@ class App extends React.Component<IProps, IState> {
                             break;
                         case SelectionValidation.IS_TWO:
                             inspectMessage = "Compare selected";
+                            canPaste = true;
                             break;
                         case SelectionValidation.IS_NODE:
                             inspectMessage = "Select an instance";
@@ -77,12 +79,14 @@ class App extends React.Component<IProps, IState> {
                             inspectMessage = "Select items to compare";
                             break;
                     }
+                    let canSwap:boolean = (validation.reason === SelectionValidation.IS_TWO) && (this.state.targetData !== undefined);
                     this.setState({
                         inspectEnabled: validation.isValid,
                         selectionValidation: validation,
                         pasteEnabled: canPaste && this.state.dataVerified,
                         inspectMessage,
-                        totalNodeCount: validation.childCount
+                        totalNodeCount: validation.childCount,
+                        swapEnabled: canSwap
                     });
                     break;
                 case "data-verified":
@@ -169,8 +173,9 @@ class App extends React.Component<IProps, IState> {
         parent.postMessage({
             pluginMessage: {
                 type: 'paste-overrides',
+                // If there are 2 nodes selected, paste back from target onto source
                 data: {
-                    targetId: this.state.targetData.id
+                    targetId: this.state.sourceData ? this.state.sourceData.id : undefined
                 }
             }
         }, '*')

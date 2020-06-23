@@ -350,7 +350,12 @@ figma.ui.onmessage = (msg) => {
 
     if (msg.type === "paste-overrides") {
         log(0, "Received paste request. Getting node...", msg);
-        let target:SceneNode = figma.getNodeById(msg.data.targetId) as SceneNode;
+        let target:SceneNode;
+        if (msg.data.targetId) {
+            target = figma.getNodeById(msg.data.targetId) as SceneNode;
+        } else {
+            target = figma.currentPage.selection[0] as SceneNode;
+        }
         figma.clientStorage.getAsync("copiedOverrides")
             .then((data) => {
                 log(0, "got async data", data, "target", target);
