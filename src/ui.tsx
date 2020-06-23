@@ -168,7 +168,10 @@ class App extends React.Component<IProps, IState> {
     onPaste = () => {
         parent.postMessage({
             pluginMessage: {
-                type: 'paste-overrides'
+                type: 'paste-overrides',
+                data: {
+                    targetId: this.state.targetData.id
+                }
             }
         }, '*')
     }

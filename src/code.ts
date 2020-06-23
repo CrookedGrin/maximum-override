@@ -330,7 +330,7 @@ figma.ui.onmessage = (msg) => {
     if (msg.type === "compare-selected") {
         const selection: SceneNode[] = Array.from(figma.currentPage.selection);
         let start = new Date().getTime();
-        let { sourceData, targetData } = getSourceAndTargetFromSelection(selection);        
+        let { sourceData, targetData } = getSourceAndTargetFromSelection(selection);
         let { source, target } = getOverrideDataForNodes(sourceData, targetData);
         let end = new Date().getTime();
         log(0, "Finished inspecting selected nodes.", target, end - start);
@@ -350,8 +350,7 @@ figma.ui.onmessage = (msg) => {
 
     if (msg.type === "paste-overrides") {
         log(0, "Received paste request. Getting node...", msg);
-        const selection: SceneNode[] = Array.from(figma.currentPage.selection);
-        const target: SceneNode = selection[0];
+        let target:SceneNode = figma.getNodeById(msg.data.targetId) as SceneNode;
         figma.clientStorage.getAsync("copiedOverrides")
             .then((data) => {
                 log(0, "got async data", data, "target", target);
@@ -367,11 +366,11 @@ figma.ui.onmessage = (msg) => {
         log(0, "Swapping symbols", msg);
         let originalTarget: IOverrideData = createDataWrapperForNode(figma.getNodeById(msg.data.targetId) as SceneNode);
         let originalSource: IOverrideData = createDataWrapperForNode(figma.getNodeById(msg.data.sourceId) as SceneNode);
-        let { source, target } = getOverrideDataForNodes(originalTarget, originalSource);
+        let {source, target} = getOverrideDataForNodes(originalTarget, originalSource);
         log(0, "Finished inspecting swapped nodes.", target);
         figma.ui.postMessage({
             type: "comparison-finished",
-            payload: { source, target },
+            payload: {source, target},
         });
     }
 
