@@ -13,7 +13,7 @@ import {
 
 declare function require(path: string): any
 
-interface IProps { }
+interface IProps {}
 
 interface IState {
     inspectEnabled: boolean;
@@ -60,6 +60,7 @@ class App extends React.Component<IProps, IState> {
                     const validation:ISelectionValidation = message.validation;
                     let inspectMessage:string;
                     let canPaste: boolean = false;
+                    console.log('selection-validation', message.validation);
                     switch (validation.reason) {
                         case SelectionValidation.IS_INSTANCE:
                             inspectMessage = "Compare instance to master";

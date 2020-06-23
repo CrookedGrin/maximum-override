@@ -197,6 +197,7 @@ function applyOverrideProp(
     isRoot: boolean
 ):boolean {
     // log(0, "fop", key, prop);
+    let textProps:any[] = [];
     switch (key) {
         case "backgrounds":
         case "fills":
@@ -213,15 +214,29 @@ function applyOverrideProp(
                 target[key] = prop;
             }
             return true;
+        // For these text props, we must async load the font first.
+        // Applying them should be almost synchronous once the font has been loaded.
+        case "fontName":
+            let textNode = target as TextNode;
+            let fontName:FontName = prop as FontName;
+            figma.loadFontAsync(fontName).then((data) => {
+                (textNode as any).fontName = fontName;
+            });
+            return false;
         case "characters":
         case "fontSize":
-        case "fontName":
-        case "textStyleId":
-        case "textCase":
-        case "textDecoration":
         case "letterSpacing":
         case "lineHeight":
-            // must load font first
+        case "paragraphIndent":
+        case "paragraphSpacing":
+        case "paragraphSpacing":
+        case "textAlignHorizontal":
+        case "textAlignVertical":
+        case "textAutoResize":
+        case "textCase":
+        case "textDecoration":
+        case "textStyleId":
+            //TODO: Send UI notifications for errors
             if (key in target) {
                 if (typeof prop === "symbol") {
                     log(0, "Multiple font attributes detected within ", prop);
@@ -232,13 +247,13 @@ function applyOverrideProp(
                     log(0, "Text field has missing font. Can't edit properties.");
                     return false;
                 }
+                textProps.push({key, prop});
                 let fontName = textNode.fontName;
                 if (typeof fontName === "symbol") {
                     log(0, "Multiple font attributes detected within ", target.name);
                     return false;
                 }
-                let font = (prop as FontName);
-                figma.loadFontAsync(font).then((data) => {
+                figma.loadFontAsync(fontName).then((data) => {
                     (textNode as any)[key] = prop;
                 });
             }

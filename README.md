@@ -60,6 +60,20 @@ Select a single item and click "Paste overrides" to apply the saved overrides to
 
 ---
 
+### Not Supported (yet) / Known Issues
+
+#### Very large components
+
+Components with large numbers of layers and nested instances may be quite slow to process. Future versions may include a progress bar and other optimizations.
+
+#### Multiple text styles
+
+Text layers get very complicated, since each character can have its own set of styles and overrides. Maximum Override currently assumes that there is only one font / style applied to a given text field.
+
+<br/>
+
+---
+
 ### Development
 
 

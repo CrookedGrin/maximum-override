@@ -78,25 +78,73 @@ export function countChildren(node:any):number {
     return counter;
 }
 
+export interface IProps {
+    backgrounds: Paint[];
+    backgroundStyleId: string;
+    blendMode: BlendMode;
+    clipsContent: boolean;
+    cornerRadius: number | PluginAPI["mixed"];
+    cornerSmoothing: number;
+    counterAxisSizingMode: string;
+    dashPattern: number[];
+    effects: Effect[];
+    effectStyleId: string;
+    fills: Paint[] | PluginAPI["mixed"];
+    fillStyleId: string | PluginAPI["mixed"];
+    horizontalPadding: number;
+    itemSpacing: number;
+    layoutAlign: string;
+    layoutMode: string;
+    locked: boolean;
+    masterComponent: ComponentNode;
+    name: string;
+    opacity: number;
+    strokeAlign: string;
+    strokeCap: string | PluginAPI["mixed"];
+    strokeJoin: string | PluginAPI["mixed"];
+    strokes: Paint[];
+    strokeStyleId: string;
+    verticalPadding: number;
+    visible: boolean;
+
+    characters: string;
+    fontName: FontName | PluginAPI["mixed"];
+    fontSize: number | PluginAPI["mixed"];
+    letterSpacing: LetterSpacing | PluginAPI["mixed"];
+    lineHeight: PluginAPI["mixed"] | any;
+    paragraphIndent: number;
+    paragraphSpacing: number;
+    textAlignHorizontal: string;
+    textAlignVertical: string;
+    textAutoResize: string;
+    textCase: string | PluginAPI["mixed"];
+    textDecoration: string | PluginAPI["mixed"];
+    textStyleId: string | PluginAPI["mixed"];
+}
+
 /**
  * NOTE: Using the explicit property names like this is many, many times
  * faster than an iterated string-based property lookup like node[key].
  */
-export function getPropsFromNode(node:any):any {
+export function getPropsFromNode(node:any):IProps {
     let props:any = {};
+
     props.backgrounds = node.backgrounds;
     props.backgroundStyleId = node.backgroundStyleId;
-    props.effects = node.effects;
-    props.effectStyleId = node.effectStyleId;
-    props.fills = node.fills;
-    props.fillStyleId = node.fillStyleId;
-    props.strokes = node.strokes;
-    props.strokeStyleId = node.strokeStyleId;
     props.blendMode = node.blendMode;
     props.clipsContent = node.clipsContent;
     props.cornerRadius = node.cornerRadius;
     props.cornerSmoothing = node.cornerSmoothing;
+    props.counterAxisSizingMode = node.counterAxisSizingMode;
     props.dashPattern = node.dashPattern;
+    props.effects = node.effects;
+    props.effectStyleId = node.effectStyleId;
+    props.fills = node.fills;
+    props.fillStyleId = node.fillStyleId;
+    props.horizontalPadding = node.horizontalPadding;
+    props.itemSpacing = node.itemSpacing;
+    props.layoutAlign = node.layoutAlign;
+    props.layoutMode = node.layoutMode;
     props.locked = node.locked;
     props.masterComponent = node.masterComponent;
     props.name = node.name;
@@ -104,14 +152,25 @@ export function getPropsFromNode(node:any):any {
     props.strokeAlign = node.strokeAlign;
     props.strokeCap = node.strokeCap;
     props.strokeJoin = node.strokeJoin;
+    props.strokes = node.strokes;
+    props.strokeStyleId = node.strokeStyleId;
+    props.verticalPadding = node.verticalPadding;
     props.visible = node.visible;
+
     props.characters = node.characters;
-    props.fontSize = node.fontSize;
     props.fontName = node.fontName;
+    props.fontSize = node.fontSize;
     props.letterSpacing = node.letterSpacing;
     props.lineHeight = node.lineHeight;
+    props.paragraphIndent = node.paragraphIndent
+    props.paragraphSpacing = node.paragraphSpacing
+    props.textAlignHorizontal = node.textAlignHorizontal;
+    props.textAlignVertical = node.textAlignVertical;
+    props.textAutoResize = node.textAutoResize;
     props.textCase = node.textCase;
     props.textDecoration = node.textDecoration;
+    props.textStyleId = node.textStyleId;
+
     return props;
 }
 
@@ -172,40 +231,5 @@ export function RGBToHex(color: IColor) {
         b = "0" + b;
     return "#" + r + g + b;
 }
-
-export const overridableProps = [
-    // colors
-    "backgrounds",
-    "backgroundStyleId",
-    "effects",
-    "effectStyleId",
-    "fills",
-    "fillStyleId",
-    "strokes",
-    "strokeStyleId",
-
-    "blendMode",
-    "clipsContent",
-    "cornerRadius",
-    "cornerSmoothing",
-    "dashPattern",
-    "locked",
-    "masterComponent",
-    "name",
-    "opacity",
-    "strokeAlign",
-    "strokeCap",
-    "strokeJoin",
-    "visible",
-
-    // text
-    "characters",
-    "fontSize",
-    "fontName",
-    "letterSpacing",
-    "lineHeight",
-    "textCase",
-    "textDecoration",
-];
 
 
