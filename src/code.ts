@@ -301,8 +301,47 @@ function applyOverridesToNode(
 }
 
 /*******************************************************
- * Handle UI messages
+ * Handle UI
  *******************************************************/
+
+function validateClientStorage() {
+    return new Promise((resolve, reject) => {
+        figma.clientStorage.getAsync("copiedOverrides")
+            .then((data) => {
+                if (data === undefined) {
+                    reject();
+                } else {
+                    figma.ui.postMessage({
+                        type: "client-storage-validated"
+                    });
+                    resolve();
+                }
+            })
+            .catch((error) => {
+                log(0, "ERROR: async", error);
+                reject();
+            })
+            .finally(() => {});
+    });
+}
+
+figma.on("selectionchange", () => {
+    const selection: SceneNode[] = Array.from(figma.currentPage.selection);
+    const validation =  validateSelection(selection);
+    validateClientStorage().then(() => {
+        figma.ui.postMessage({
+            type: "selection-validation",
+            validation,
+            clientStorageIsValid: true
+        })
+    }).catch(() => {
+        figma.ui.postMessage({
+            type: "selection-validation",
+            validation,
+            clientStorageIsValid: false
+        })
+    });;
+});
 
 figma.ui.onmessage = (msg) => {
     if (msg.type === "initial-render") {
@@ -311,20 +350,7 @@ figma.ui.onmessage = (msg) => {
             type: "selection-validation",
             validation: validateSelection(selection),
         });
-        // Check for saved data
-        figma.clientStorage.getAsync("copiedOverrides")
-            .then((data) => {
-                if (data !== undefined) {
-                    figma.ui.postMessage({
-                        type: "data-verified",
-                        validation: validateSelection(selection)
-                    });
-                }
-            })
-            .catch((error) => {
-                log(0, "ERROR: async", error);
-            })
-            .finally(() => {});
+        validateClientStorage();
     }
 
     if (msg.type === "compare-selected") {
@@ -334,7 +360,6 @@ figma.ui.onmessage = (msg) => {
         let { source, target } = getOverrideDataForNodes(sourceData, targetData);
         let end = new Date().getTime();
         log(0, "Finished inspecting selected nodes.", target, end - start);
-
         figma.ui.postMessage({
             type: "comparison-finished",
             payload: { source, target },
@@ -351,9 +376,14 @@ figma.ui.onmessage = (msg) => {
     if (msg.type === "paste-overrides") {
         log(0, "Received paste request. Getting node...", msg);
         let target:SceneNode;
-        if (msg.data.targetId) {
-            target = figma.getNodeById(msg.data.targetId) as SceneNode;
+        if (figma.currentPage.selection.length === 1) {
+            target = figma.currentPage.selection[0] as SceneNode;
         } else {
+            if (msg.data.targetId) {
+                target = figma.getNodeById(msg.data.targetId) as SceneNode;
+            }
+        }
+        if (target === undefined) {
             target = figma.currentPage.selection[0] as SceneNode;
         }
         figma.clientStorage.getAsync("copiedOverrides")
@@ -362,6 +392,7 @@ figma.ui.onmessage = (msg) => {
                 applyOverridesToNode(data, target, 1);
             })
             .catch((error) => {
+                // TODO: post notification
                 log(0, "ERROR: async", error);
             })
             .finally(() => {});
@@ -388,10 +419,3 @@ figma.ui.onmessage = (msg) => {
     }
 };
 
-figma.on("selectionchange", () => {
-    const selection: SceneNode[] = Array.from(figma.currentPage.selection);
-    figma.ui.postMessage({
-        type: "selection-validation",
-        validation: validateSelection(selection),
-    });
-});

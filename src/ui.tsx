@@ -26,7 +26,7 @@ interface IState {
     sourceData?: IOverrideData;
     targetData?: IOverrideData;
     copyButtonMessage: string;
-    dataVerified: boolean;
+    clientStorageValidated: boolean;
     totalNodeCount: number;
     comparedNodeCount: number;
     comparisonInProgress: boolean;
@@ -45,7 +45,7 @@ class App extends React.Component<IProps, IState> {
         sourceData: undefined,
         targetData: undefined,
         copyButtonMessage: "Copy overrides",
-        dataVerified: false,
+        clientStorageValidated: false,
         totalNodeCount: 0,
         comparedNodeCount: 0,
         comparisonInProgress: false
@@ -60,8 +60,7 @@ class App extends React.Component<IProps, IState> {
                     const validation:ISelectionValidation = message.validation;
                     let inspectMessage:string;
                     let canPaste: boolean = false;
-
-                    console.log('selection-validation', message.validation);
+                    console.log('selection-validation', message.validation, 'dataVerified:', this.state.clientStorageValidated);
                     switch (validation.reason) {
                         case SelectionValidation.IS_INSTANCE:
                             inspectMessage = "Compare instance to master";
@@ -83,15 +82,15 @@ class App extends React.Component<IProps, IState> {
                     this.setState({
                         inspectEnabled: validation.isValid,
                         selectionValidation: validation,
-                        pasteEnabled: canPaste && this.state.dataVerified,
+                        pasteEnabled: canPaste && message.clientStorageIsValid,
                         inspectMessage,
                         totalNodeCount: validation.childCount,
                         swapEnabled: canSwap
                     });
                     break;
-                case "data-verified":
+                case "client-storage-validated":
                     this.setState({
-                        dataVerified: true
+                        clientStorageValidated: true
                     });
                     break;
                 case "comparison-finished":
@@ -106,7 +105,6 @@ class App extends React.Component<IProps, IState> {
                     });
                     break;
                 case "copy-confirmation":
-                    console.log("Copy confirmation message received");
                     this.setState({
                         copyButtonMessage: "Overrides copied",
                         copyEnabled: false,
