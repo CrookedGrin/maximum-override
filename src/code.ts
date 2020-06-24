@@ -304,37 +304,28 @@ function applyOverridesToNode(
  * Handle UI
  *******************************************************/
 
-function validateClientStorage() {
-    return new Promise((resolve, reject) => {
-        figma.clientStorage.getAsync("copiedOverrides")
-            .then((data) => {
-                if (data === undefined) {
-                    reject();
-                } else {
-                    figma.ui.postMessage({
-                        type: "client-storage-validated"
-                    });
-                    resolve();
-                }
-            })
-            .catch((error) => {
-                log(0, "ERROR: async", error);
-                reject();
-            })
-            .finally(() => {});
-    });
+async function validateClientStorage() {
+    const data = await figma.clientStorage.getAsync("copiedOverrides");
+    const isValid = data !== undefined;
+    if (isValid) {
+        figma.ui.postMessage({
+            type: "client-storage-validated"
+        });
+    }
+    return isValid;
 }
 
 figma.on("selectionchange", () => {
     const selection: SceneNode[] = Array.from(figma.currentPage.selection);
-    const validation =  validateSelection(selection);
-    validateClientStorage().then(() => {
+    const validation = validateSelection(selection);
+    validateClientStorage().then((isValid) => {
         figma.ui.postMessage({
             type: "selection-validation",
             validation,
-            clientStorageIsValid: true
+            clientStorageIsValid: isValid
         })
     }).catch(() => {
+        // TODO: Notify client
         figma.ui.postMessage({
             type: "selection-validation",
             validation,
