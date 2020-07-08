@@ -5,7 +5,7 @@ const env = process.env.NODE_ENV;
 export function log(indentLevel:number = 0, ...args) {
     if (env !== "development") return;
     let indent:string = "──".repeat(indentLevel) + " ";
-    console.log(indent, ...args);
+    // console.log(indent, ...args);
 }
 
 export interface IOverrideData {
@@ -40,6 +40,16 @@ const parentTypes = [
 
 export function supportsChildren(node:any):boolean {
     return (parentTypes.indexOf(node.type) > -1);
+}
+
+const autoLayoutTypes = [
+    'FRAME',
+    'INSTANCE',
+    'COMPONENT'
+]
+
+export function supportsAutoLayout(node:any):boolean {
+    return (autoLayoutTypes.indexOf(node.type) > -1);
 }
 
 export function checkEquality(key: string, sourceValue: any, targetValue: any) {
@@ -79,6 +89,9 @@ export function countChildren(node:any):number {
 }
 
 export interface IProps {
+    width: number;
+    height: number;
+
     backgrounds: Paint[];
     backgroundStyleId: string;
     blendMode: BlendMode;
@@ -128,6 +141,9 @@ export interface IProps {
  */
 export function getPropsFromNode(node:any):IProps {
     let props:any = {};
+
+    props.width = node.width;
+    props.height = node.height;
 
     props.backgrounds = node.backgrounds;
     props.backgroundStyleId = node.backgroundStyleId;
@@ -196,11 +212,7 @@ export function validateSelection(selection: SceneNode[]): ISelectionValidation 
         return { isValid: false, reason: SelectionValidation.MORE_THAN_TWO };
     }
     if (selection.length === 1) {
-        let start = new Date().getTime();
         let childCount = countChildren(selection[0]);
-        let end = new Date().getTime();
-        console.log(end - start);
-        
         if (selection[0].type !== "INSTANCE") {
             return { isValid: false, reason: SelectionValidation.IS_NODE, childCount };
         } else {
