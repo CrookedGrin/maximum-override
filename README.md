@@ -6,9 +6,7 @@
 
 Compare objects to see what's different, then copy and paste the changes. Compare instances to their default master symbol and copy and paste the overrides.
 
-<br />
-
-[Install in Figma here](https://www.figma.com/community/plugin/844697202715835091/Maximum-Override)
+[https://www.figma.com/community/plugin/844697202715835091/Maximum-Override](https://www.figma.com/community/plugin/844697202715835091/Maximum-Override)
 
 <br />
 
