@@ -8,6 +8,10 @@ Compare objects to see what's different, then copy and paste the changes. Compar
 
 <br />
 
+[Install in Figma here](https://www.figma.com/community/plugin/844697202715835091/Maximum-Override)
+
+<br />
+
 ---
 
 ## Features
