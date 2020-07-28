@@ -217,15 +217,19 @@ class App extends React.Component<IProps, IState> {
         if (isNone) {
             toolTip = '(None)';
         } else {
-            toolTip = RGBToHex(converted).toUpperCase();
+            toolTip = `RGB: ${converted.r}, ${converted.g}, ${converted.b}`;
         }
+        let hex = isNone ? 'None' : RGBToHex(converted).toUpperCase();
         let rgbString = `rgb(${converted.r}, ${converted.g}, ${converted.b})`
         let classes = isNone ? "rgbColor rgbColor--none" : "rgbColor hasTooltip";
         return (
-            <span
-                className={classes}
-                style={{ backgroundColor: rgbString }}
-                data-tooltip={toolTip}>
+            <span className="color">
+                <span
+                    className={classes}
+                    style={{ backgroundColor: rgbString }}
+                    data-tooltip={toolTip}>
+                </span>
+                <span>{hex}</span>
             </span>
         )
     }
@@ -254,14 +258,10 @@ class App extends React.Component<IProps, IState> {
             case "masterComponent":
                 return (
                     <div className="prop" key={key}>
-                        <span className="key">Master:</span>
-                        <span className="hasTooltip" data-tooltip={sourceValue.name}>
-                            <span className="value">{sourceValue.name}</span>
-                        </span>
+                        <span className="key">Main:</span>
+                        <span className="value"><span className="string">{sourceValue.name}</span></span>
                         <span className="arrow">→</span>
-                        <span className="hasTooltip" data-tooltip={targetValue.name}>
-                            <span className="value">{targetValue.name}</span>
-                        </span>
+                        <span className="value"><span className="string">{targetValue.name}</span></span>
                     </div>
                 )
             case "name":
@@ -269,13 +269,9 @@ class App extends React.Component<IProps, IState> {
                 return (
                     <div className="prop" key={key}>
                         <span className="key">{key}:</span>
-                        <span className="hasTooltip" data-tooltip={sourceValue.toString()}>
-                            <span className="value">{sourceValue.toString()}</span>
-                        </span>
+                        <span className="value"><span className="string">{sourceValue.toString()}</span></span>
                         <span className="arrow">→</span>
-                        <span className="hasTooltip" data-tooltip={targetValue.toString()}>
-                            <span className="value">{targetValue.toString()}</span>
-                        </span>
+                        <span className="value"><span className="string">{targetValue.toString()}</span></span>
                     </div>
                 )
             case "fontName":
@@ -359,7 +355,7 @@ class App extends React.Component<IProps, IState> {
                         this.renderCaret(nodeData.isCollapsed)
                     }
                     {this.renderNodeIcon(nodeData.type)}
-                    {nodeData.name}
+                    <span className="node-name">{nodeData.name}</span>
                 </span>
                 {!nodeData.isCollapsed && (
                     <>

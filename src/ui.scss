@@ -105,6 +105,14 @@
     margin: 0 4px;
   }
 
+  .compare-node {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 40%;
+  }
+
   &:hover {
     .expand-collapse {
       opacity: 1;
@@ -125,12 +133,17 @@
   background-color: var(--silver);
   padding: 8px 8px 16px 16px;
   height: 500px;
+  width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
 
   &--collapsed {
     display: none;
   }
+}
+
+.nodes {
+  width: 100%;
 }
 
 .node {
@@ -167,19 +180,29 @@
     margin: 0;
     border-radius: 4px;
     pointer-events: none;
+    max-width: 100%;
 
     &--collapsible {
       pointer-events: inherit;
       cursor: pointer;
     }
 
+    .node-name {
+      max-width: calc(100% - 36px);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
     &:hover > .expand-collapse {
         opacity: 1;
     }
+
+
   }
 
   .props {
-    display: block;
+    width: 100%;
 
     .prop {
       display: flex;
@@ -189,19 +212,28 @@
       background: #fff;
       border-radius: 4px;
       margin: 0 8px 4px;
-      width: max-content;
+      max-width: fit-content;
 
       &--inline {
         display: inline-flex;
       }
 
+      &:first-child {
+        margin-top: 4px;
+      }
+
       .value {
-        display: inline-block;
+        display: inline-flex;
         color: var(--purple);
-        text-overflow: ellipsis;
+        max-width: 70%;
         overflow: hidden;
-        white-space: nowrap;
         padding: 0 2px;
+
+        .string {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
       }
 
       .key, .arrow {
@@ -209,23 +241,27 @@
         color: var(--hud)
       }
 
-      span {
-        position: relative;
-      }
-
       span:not(:first-child) {
         margin-left: 2px;
       }
+    }
+
+    .color {
+      display: inline-flex;
+      align-items: center;
+      position: relative;
+      margin: 0 2px;
     }
 
     .rgbColor {
       display: inline-flex;
       align-items: center;
       position: relative;
-      width: 12px;
-      height: 12px;
+      width: 13px;
+      height: 13px;
       border: 1px solid #333;
       border-radius: 4px;
+      margin-right: 2px;
       
       &--none {
         border-color: #ccc;
