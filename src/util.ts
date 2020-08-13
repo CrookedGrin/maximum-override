@@ -55,7 +55,7 @@ export function supportsAutoLayout(node:any):boolean {
 export function checkEquality(key: string, sourceValue: any, targetValue: any) {
     if (sourceValue === undefined && targetValue === undefined) return true;
     switch (key) {
-        case "masterComponent":
+        case "mainComponent":
             return sourceValue.id === targetValue.id;
         default:
             return equal(sourceValue, targetValue);
@@ -71,7 +71,7 @@ export function formatOverrideProp(key: string, prop: any) {
                 return [];
             }
             break;
-        case "masterComponent":
+        case "mainComponent":
             return { name: prop.name, id: prop.id };
     }
     return prop;
@@ -109,7 +109,7 @@ export interface IProps {
     layoutAlign: string;
     layoutMode: string;
     locked: boolean;
-    masterComponent: ComponentNode;
+    mainComponent: ComponentNode;
     name: string;
     opacity: number;
     strokeAlign: string;
@@ -162,7 +162,7 @@ export function getPropsFromNode(node:any):IProps {
     props.layoutAlign = node.layoutAlign;
     props.layoutMode = node.layoutMode;
     props.locked = node.locked;
-    props.masterComponent = node.masterComponent;
+    props.mainComponent = node.mainComponent;
     props.name = node.name;
     props.opacity = node.opacity;
     props.strokeAlign = node.strokeAlign;
@@ -229,19 +229,64 @@ export interface IColor {
     r: number;
     g: number;
     b: number;
+    a?: number;
 }
 
-export function RGBToHex(color: IColor) {
-    let r = color.r.toString(16);
-    let g = color.g.toString(16);
-    let b = color.b.toString(16);
+export function formatRgbaColor(color: IColor):IColor {
+    let converted: IColor = {
+        r: Math.round(color.r * 255),
+        g: Math.round(color.g * 255),
+        b: Math.round(color.b * 255)
+    }
+    if (color.a !== undefined) {
+        converted.a = Math.round(color.a * 255);
+    }
+    return converted;
+}
+
+export function rgbaToHex(color: IColor) {
+    let returnString:string;
+    let base = 16;
+    let r = color.r.toString(base);
+    let g = color.g.toString(base);
+    let b = color.b.toString(base);
     if (r.length == 1)
         r = "0" + r;
     if (g.length == 1)
         g = "0" + g;
     if (b.length == 1)
         b = "0" + b;
-    return "#" + r + g + b;
+    returnString = "#" + r + g + b;
+    if (color.a !== undefined) {
+        let a = color.a.toString(base);
+        if (a.length == 1)
+            a = "0" + a;
+        returnString += a;
+    }
+    return returnString.toUpperCase();
 }
 
-
+export function createCssGradient(paint:GradientPaint) {
+    let gradient:string = "";
+    switch (paint.type) {
+        default:
+        case "GRADIENT_LINEAR":
+            gradient += "linear-gradient(";
+            break;
+        case "GRADIENT_RADIAL":
+            gradient += "radial-gradient(";
+            break;
+        case "GRADIENT_ANGULAR":
+        case "GRADIENT_DIAMOND":
+            gradient += "conic-gradient(";
+            break;
+    }
+    paint.gradientStops.forEach(stop => {
+        let formatted = formatRgbaColor(stop.color);
+        let stopString:string = rgbaToHex(formatted);
+        gradient += stopString + ", "
+    })
+    gradient = gradient.slice(0, -2);
+    gradient += ")";
+    return gradient;
+}

@@ -23,7 +23,7 @@
     "webpack-cli": "^3.3.6"
   },
   "devDependencies": {
-    "@figma/plugin-typings": "^1.15.0",
+    "@figma/plugin-typings": "^1.16.1",
     "@types/node-sass": "^4.11.1",
     "@types/react": "^16.9.35",
     "css-loader": "^3.5.3",

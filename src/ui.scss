@@ -262,7 +262,7 @@
       border: 1px solid #333;
       border-radius: 4px;
       margin-right: 2px;
-      
+
       &--none {
         border-color: #ccc;
       }
@@ -281,6 +281,15 @@
         color: #999;
       }
 
+      &--image {
+        background:
+          url('data:image/svg+xml;utf8,<svg preserveAspectRatio="none"  viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="5" height="5" fill="grey" /><rect x="5" y="5" width="5" height="5" fill="grey" /><rect x="5" y="0" width="5" height="5" fill="white" /><rect x="0" y="5" width="5" height="5" fill="white" /></svg>') 
+          0 0/50% 50%;
+      }
+
+      &--gradient {
+        background: linear-gradient(45deg, #666, #fff);
+      }
     }
   }
 }
@@ -299,6 +308,9 @@
     transform: translateX(-50%);
     white-space: nowrap;
     max-width: 300px;
+    overflow: hidden;
+    word-wrap: none;
+    text-overflow: ellipsis;
     background: #333;
     color: #fff;
     padding: 4px 8px;

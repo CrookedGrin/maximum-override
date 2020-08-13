@@ -9,7 +9,7 @@ let hasOverrides:util.IOverrideData[] = [];
 
 /**
  * @param targetNode The node that's being recursively introspected
- * @param sourceNode The node we're comparing against (an instance of master for single selection)
+ * @param sourceNode The node we're comparing against (an instance of main for single selection)
  * @param recursionLevel Integer for indenting output strings
  */
 function getOverridesForNode(
@@ -54,27 +54,27 @@ function compareProps(
         hasOverrides.push(targetData);
     }
     /*
-    If the target's masterComponent has changed, we need to compare against an instance
-    of that master rather than the original component
+    If the target's mainComponent has changed, we need to compare against an instance
+    of that main rather than the original component
     TODO: make this toggleable?
     */
-    let hasNewMaster:boolean;
+    let hasNewMain:boolean;
     targetData.overriddenProps.forEach((prop) => {
-        if (prop.key === 'masterComponent') hasNewMaster = true;
+        if (prop.key === 'mainComponent') hasNewMain = true;
     });
-    if (hasNewMaster) {
-        let component = ((targetData.associatedNode as InstanceNode).masterComponent as ComponentNode);
+    if (hasNewMain) {
+        let component = ((targetData.associatedNode as InstanceNode).mainComponent as ComponentNode);
         if (component.remote) {
             util.log(recursionLevel + 1, "Remote component detected. Key:", component.key);
         }
         try {
             let newSourceNode:SceneNode = component.createInstance();
             let newSourceData:util.IOverrideData = util.createDataWrapperForNode(newSourceNode);
-            util.log(recursionLevel, 'New Master', newSourceNode.name, newSourceData);
+            util.log(recursionLevel, 'New Main', newSourceNode.name, newSourceData);
             sourceData = newSourceData;
             temporaryNodes.push(newSourceNode);
         } catch(e) {
-            util.log(recursionLevel + 1, "Couldn't create an instance. Is this a nested master component?", e);
+            util.log(recursionLevel + 1, "Couldn't create an instance. Is this a nested main component?", e);
             return;
         }
     }
@@ -123,11 +123,11 @@ function getSourceAndTargetFromSelection(selection: SceneNode[]):any {
         if (targetNode.type === "INSTANCE") {
             targetNode = selection[0] as InstanceNode;
             targetData = util.createDataWrapperForNode(targetNode);
-            sourceNode = targetNode.masterComponent.createInstance();
+            sourceNode = targetNode.mainComponent.createInstance();
             sourceData = util.createDataWrapperForNode(sourceNode);
-            sourceData.name = "Master";
+            sourceData.name = "Main";
             sourceData.type = "COMPONENT";
-            util.log(0, "Comparing master ", sourceData, " to target ", targetData);
+            util.log(0, "Comparing main ", sourceData, " to target ", targetData);
             temporaryNodes.push(sourceData.associatedNode);
         } else {
             util.log(0, "Selection must be an Instance.");
@@ -178,7 +178,7 @@ function getOverrideDataForNodes(sourceData:util.IOverrideData, targetData:util.
  * @param prop The prop data object
  * @param target The Figma node to apply the prop to
  * @param isRoot Whether this is the top-level parent
- * @returns true if we're updating the master component
+ * @returns true if we're updating the main component
  */
 function applyOverrideProp(
     key: string,
@@ -196,7 +196,7 @@ function applyOverrideProp(
                 target[key] = prop;
             }
             return false;
-        case "masterComponent":
+        case "mainComponent":
             // don't apply this one at the root level
             if (!isRoot) {
                 //TODO: Add checkbox for "don't rename layers"

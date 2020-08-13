@@ -8,7 +8,9 @@ import {
     SelectionValidation,
     IColor,
     IOverrideData,
-    RGBToHex
+    rgbaToHex,
+    formatRgbaColor,
+    createCssGradient
 } from './util'
 
 declare function require(path: string): any
@@ -63,7 +65,7 @@ class App extends React.Component<IProps, IState> {
                     // console.log('selection-validation', message.validation, 'dataVerified:', this.state.clientStorageValidated);
                     switch (validation.reason) {
                         case SelectionValidation.IS_INSTANCE:
-                            inspectMessage = "Compare instance to master";
+                            inspectMessage = "Compare instance to main";
                             canPaste = true;
                             break;
                         case SelectionValidation.IS_TWO:
@@ -200,38 +202,87 @@ class App extends React.Component<IProps, IState> {
      * Rendering
      **********************************/
 
-    renderRGBColor = (paint: any) => {
-        let color: IColor;
-        const isNone = paint === undefined;
-        if (isNone) {
-            color = { r: 1, g: 1, b: 1 };
-        } else {
-            color = paint.color;
-        }
-        let converted: IColor = {
-            r: Math.round(color.r * 255),
-            g: Math.round(color.g * 255),
-            b: Math.round(color.b * 255)
-        }
-        let toolTip: string;
-        if (isNone) {
-            toolTip = '(None)';
-        } else {
-            toolTip = `RGB: ${converted.r}, ${converted.g}, ${converted.b}`;
-        }
-        let hex = isNone ? 'None' : RGBToHex(converted).toUpperCase();
-        let rgbString = `rgb(${converted.r}, ${converted.g}, ${converted.b})`
-        let classes = isNone ? "rgbColor rgbColor--none" : "rgbColor hasTooltip";
+    renderEmptyBlock = () => {
+       return (
+           <span className="color">
+               <span className="rgbColor rgbColor--none"/>
+               <span>(None)</span>
+           </span>
+       )
+    }
+
+    renderSolidBlock = (color:IColor) => {
+       let formatted:IColor = formatRgbaColor(color);
+       let toolTip:string = `RGB: ${formatted.r}, ${formatted.g}, ${formatted.b}`;
+       let hexString:string = rgbaToHex(formatted);
+       let rgbString:string = `rgb(${formatted.r}, ${formatted.g}, ${formatted.b})`
+       return (
+            <span className="color">
+                <span
+                    className="rgbColor hasTooltip"
+                    style={{backgroundColor: rgbString}}
+                    data-tooltip={toolTip}
+                />
+                <span>{hexString}</span>
+            </span>
+       )
+    }
+
+    renderGradientBlock = (paint:GradientPaint) => {
+        let toolTip:string = "";
+        paint.gradientStops.forEach(stop => {
+            let color = formatRgbaColor(stop.color);
+            let str = rgbaToHex(color);
+            toolTip += str + ", "
+        });
+        toolTip = toolTip.slice(0, -2);
+        let gradient:string = createCssGradient(paint);
         return (
             <span className="color">
                 <span
-                    className={classes}
-                    style={{ backgroundColor: rgbString }}
-                    data-tooltip={toolTip}>
-                </span>
-                <span>{hex}</span>
+                    className="rgbColor rgbColor--gradient hasTooltip"
+                    style={{background: gradient}}
+                    data-tooltip={toolTip}
+                />
+                <span>Gradient</span>
             </span>
         )
+    }
+
+    renderImageBlock = () => {
+        // let toolTip = "Image";
+        return (
+            <span className="color">
+                <span
+                    className="rgbColor rgbColor--image"
+                 //    data-tooltip={toolTip}
+                />
+                <span>Image</span>
+            </span>
+        )
+    }
+
+    renderColor = (paint: any) => {
+        if (paint === undefined) {
+            paint = {
+                type: "NONE", 
+                color: {r: 1, g: 1, b: 1}
+            };
+        }
+        switch (paint.type) {
+            case "SOLID":
+                return this.renderSolidBlock(paint.color);
+            case "IMAGE":
+                return this.renderImageBlock();
+            case "GRADIENT_LINEAR":
+            case "GRADIENT_RADIAL":
+            case "GRADIENT_ANGULAR":
+            case "GRADIENT_DIAMOND":
+                return this.renderGradientBlock(paint);
+            case "NONE":
+            default:
+                return this.renderEmptyBlock();
+        }
     }
 
     renderOverrideProp = (prop: any) => {
@@ -244,9 +295,9 @@ class App extends React.Component<IProps, IState> {
                 return (
                     <span className="prop prop--inline" key={key}>
                         <span className="key">{key}:</span>
-                        <span>{this.renderRGBColor(sourceValue[0])}</span>
+                        <span>{this.renderColor(sourceValue[0])}</span>
                         <span className="arrow">→</span>
-                        <span>{this.renderRGBColor(targetValue[0])}</span>
+                        <span>{this.renderColor(targetValue[0])}</span>
                     </span>
                 )
             case 'backgroundStyleId':
@@ -255,7 +306,7 @@ class App extends React.Component<IProps, IState> {
             case 'strokeStyleId':
                 // Hide these in the UI
                 return false;
-            case "masterComponent":
+            case "mainComponent":
                 return (
                     <div className="prop" key={key}>
                         <span className="key">Main:</span>
@@ -451,7 +502,7 @@ class App extends React.Component<IProps, IState> {
                                 {this.state.targetData === undefined &&
                                     <div className="emptyState">
                                         <div className="logo" />
-                                        <p>Select one <strong>component instance</strong> to compare it against its master component</p>
+                                        <p>Select one <strong>component instance</strong> to compare it against its main component</p>
                                         <p className="centered"><strong>OR</strong></p>
                                         <p>Select <strong>two items</strong> of any type to compare them to each other.</p>
                                     </div>

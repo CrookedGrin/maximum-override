@@ -4,7 +4,7 @@
 
 ### Take control of your Figma overrides!
 
-Compare objects to see what's different, then copy and paste the changes. Compare instances to their default master symbol and copy and paste the overrides.
+Compare objects to see what's different, then copy and paste the changes. Compare instances to their default main component and copy and paste the overrides.
 
 [https://www.figma.com/community/plugin/844697202715835091/Maximum-Override](https://www.figma.com/community/plugin/844697202715835091/Maximum-Override)
 
@@ -27,7 +27,7 @@ Maximum Override allows you to copy your overrides, swap out an instance, and th
 
 ### **2. Compare properties between objects**
 
-Maximum Override also allows you to select any two nodes on the stage and compare them against each other to see what's different. (In software, this is known as a "diff".) You can then copy the changes from object A to object B, or vice-versa. If you select a single instance, Maximum Override will compare it against its own master component.
+Maximum Override also allows you to select any two nodes on the stage and compare them against each other to see what's different. (In software, this is known as a "diff".) You can then copy the changes from object A to object B, or vice-versa. If you select a single instance, Maximum Override will compare it against its own main component.
 
 <br/>
 
@@ -40,7 +40,7 @@ Install and run Maximum Override like any other Figma plugin. See [Figma's plugi
 
 ### Comparing
 
-Select a single component instance to compare it against its own master component.
+Select a single component instance to compare it against its own main component.
 
 Select two items to compare them to each other. These can be any type of object on stage, including instances. Click "Swap" to change which is the source and which is the target of the overrides.
 
