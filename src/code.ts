@@ -186,7 +186,6 @@ function applyOverrideProp(
     target: SceneNode,
     isRoot: boolean
 ):boolean {
-    // util.log(0, "fop", key, prop);
     let textProps:any[] = [];
     switch (key) {
         case "backgrounds":
@@ -276,7 +275,6 @@ function applyOverridesToNode(
     const isRoot = recursionLevel === 1;
     util.log(recursionLevel, 'applyOverridesToNode', data.name);
     data.overriddenProps.forEach((prop) => {
-        // util.log(recursionLevel, ">>>>>> override", prop);
         try {
             if (prop.key in target) {
                 applyOverrideProp(prop.key, prop.targetValue, target, isRoot)
