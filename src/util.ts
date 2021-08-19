@@ -5,7 +5,7 @@ const env = process.env.NODE_ENV;
 export function log(indentLevel:number = 0, ...args) {
     if (env !== "development") return;
     let indent:string = "──".repeat(indentLevel) + " ";
-    // console.log(indent, ...args);
+    console.log(indent, ...args);
 }
 
 export interface IOverrideData {
@@ -17,6 +17,20 @@ export interface IOverrideData {
     childData?: IOverrideData[];
     isCollapsed?: boolean;
     parentId?: string;
+}
+
+export interface IBoxSides {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+}
+
+export interface IBoxCorners {
+    topLeft: number;
+    topRight: number;
+    bottomLeft: number;
+    bottomRight: number;
 }
 
 export function createDataWrapperForNode(node: SceneNode): IOverrideData {
@@ -74,6 +88,7 @@ export function formatOverrideProp(key: string, prop: any) {
         case "mainComponent":
             return { name: prop.name, id: prop.id };
     }
+    if (typeof prop === 'symbol') return '(Mixed)';
     return prop;
 }
 
@@ -92,32 +107,51 @@ export interface IProps {
     width: number;
     height: number;
 
+    // absoluteTransform: Transform;
+    arcData: ArcData;
     backgrounds: Paint[];
     backgroundStyleId: string;
+    bottomLeftRadius: number;
+    bottomRightRadius: number;
     blendMode: BlendMode;
     clipsContent: boolean;
+    constrainProportions: boolean;
+    constraints: Constraints;
     cornerRadius: number | PluginAPI["mixed"];
+    corners: IBoxCorners; // Special case: constructed from other props
     cornerSmoothing: number;
     counterAxisSizingMode: string;
+    counterAxisAlignItems: string;
     dashPattern: number[];
     effects: Effect[];
     effectStyleId: string;
     fills: Paint[] | PluginAPI["mixed"];
     fillStyleId: string | PluginAPI["mixed"];
-    horizontalPadding: number;
     itemSpacing: number;
+    isMask: boolean;
     layoutAlign: string;
+    layoutGrow: number;
     layoutMode: string;
     locked: boolean;
     mainComponent: ComponentNode;
     name: string;
     opacity: number;
+    padding: IBoxSides; // Special case: constructed from other props
+    paddingBottom: number;
+    paddingLeft: number;
+    paddingRight: number;
+    paddingTop: number;
+    primaryAxisSizingMode: string;
+    primaryAxisAlignItems: string;
+    // relativeTransform: Transform;
+    rotation: number;
     strokeAlign: string;
     strokeCap: string | PluginAPI["mixed"];
     strokeJoin: string | PluginAPI["mixed"];
     strokes: Paint[];
     strokeStyleId: string;
-    verticalPadding: number;
+    topLeftRadius: number;
+    topRightRadius: number;
     visible: boolean;
 
     characters: string;
@@ -145,32 +179,49 @@ export function getPropsFromNode(node:any):IProps {
     props.width = node.width;
     props.height = node.height;
 
+    // props.absoluteTransform = node.absoluteTransform;
+    props.arcData = node.arcData;
     props.backgrounds = node.backgrounds;
     props.backgroundStyleId = node.backgroundStyleId;
     props.blendMode = node.blendMode;
+    props.bottomLeftRadius = node.bottomLeftRadius;
+    props.bottomRightRadius = node.bottomRightRadius;
     props.clipsContent = node.clipsContent;
+    props.constrainProportions = node.constrainProportions;
+    props.constraints = node.constraints;
     props.cornerRadius = node.cornerRadius;
     props.cornerSmoothing = node.cornerSmoothing;
     props.counterAxisSizingMode = node.counterAxisSizingMode;
+    props.counterAxisAlignItems = node.counterAxisAlignItems;
     props.dashPattern = node.dashPattern;
     props.effects = node.effects;
     props.effectStyleId = node.effectStyleId;
     props.fills = node.fills;
     props.fillStyleId = node.fillStyleId;
-    props.horizontalPadding = node.horizontalPadding;
+    props.isMask = node.isMask;
     props.itemSpacing = node.itemSpacing;
     props.layoutAlign = node.layoutAlign;
+    props.layoutGrow = node.layoutGrow;
     props.layoutMode = node.layoutMode;
     props.locked = node.locked;
     props.mainComponent = node.mainComponent;
     props.name = node.name;
     props.opacity = node.opacity;
+    props.paddingBottom = node.paddingBottom;
+    props.paddingLeft = node.paddingLeft;
+    props.paddingRight = node.paddingRight;
+    props.paddingTop = node.paddingTop;
+    props.primaryAxisSizingMode = node.primaryAxisSizingMode;
+    props.primaryAxisAlignItems = node.primaryAxisAlignItems;
+    props.rotation = node.rotation;
+    // props.relativeTransform = node.relativeTransform;
     props.strokeAlign = node.strokeAlign;
     props.strokeCap = node.strokeCap;
     props.strokeJoin = node.strokeJoin;
     props.strokes = node.strokes;
     props.strokeStyleId = node.strokeStyleId;
-    props.verticalPadding = node.verticalPadding;
+    props.topLeftRadius = node.topLeftRadius;
+    props.topRightRadius = node.topRightRadius;
     props.visible = node.visible;
 
     props.characters = node.characters;
@@ -186,6 +237,30 @@ export function getPropsFromNode(node:any):IProps {
     props.textCase = node.textCase;
     props.textDecoration = node.textDecoration;
     props.textStyleId = node.textStyleId;
+
+    // Construct special-case objects
+    props.padding = {
+        top: node.paddingTop,
+        bottom: node.paddingBottom,
+        left: node.paddingLeft,
+        right: node.paddingRight
+    }
+
+    if (typeof node.cornerRadius === 'symbol') {
+        props.corners = {
+            topLeft: node.topLeftRadius,
+            topRight: node.topRightRadius,
+            bottomLeft: node.bottomLeftRadius,
+            bottomRight: node.bottomRightRadius
+        }
+    } else {
+        props.corners = {
+            topLeft: node.cornerRadius,
+            topRight: node.cornerRadius,
+            bottomLeft: node.cornerRadius,
+            bottomRight: node.cornerRadius
+        }
+    }
 
     return props;
 }
@@ -289,4 +364,17 @@ export function createCssGradient(paint:GradientPaint) {
     gradient = gradient.slice(0, -2);
     gradient += ")";
     return gradient;
+}
+
+export function truncate(value:any, chars:number = 0) {
+    if (!isNaN(value)) {
+        return parseFloat((value as number).toFixed(chars));
+    } else {
+        return value;
+    }
+}
+
+export function deCamel(s:string):string {
+    const regex = s.replace(/([A-Z]{1,})/g, " $1");
+    return regex.charAt(0).toUpperCase() + regex.slice(1);
 }

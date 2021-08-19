@@ -8,9 +8,13 @@ import {
     SelectionValidation,
     IColor,
     IOverrideData,
+    IBoxCorners,
+    IBoxSides,
     rgbaToHex,
     formatRgbaColor,
-    createCssGradient
+    createCssGradient,
+    truncate,
+    deCamel
 } from './util'
 
 declare function require(path: string): any
@@ -62,7 +66,6 @@ class App extends React.Component<IProps, IState> {
                     const validation:ISelectionValidation = message.validation;
                     let inspectMessage:string;
                     let canPaste: boolean = false;
-                    // console.log('selection-validation', message.validation, 'dataVerified:', this.state.clientStorageValidated);
                     switch (validation.reason) {
                         case SelectionValidation.IS_INSTANCE:
                             inspectMessage = "Compare instance to main";
@@ -213,7 +216,7 @@ class App extends React.Component<IProps, IState> {
 
     renderSolidBlock = (color:IColor) => {
        let formatted:IColor = formatRgbaColor(color);
-       let toolTip:string = `RGB: ${formatted.r}, ${formatted.g}, ${formatted.b}`;
+       let toolTip:string = `RGB:\u00A0${formatted.r},\u00A0${formatted.g},\u00A0${formatted.b}`;
        let hexString:string = rgbaToHex(formatted);
        let rgbString:string = `rgb(${formatted.r}, ${formatted.g}, ${formatted.b})`
        return (
@@ -250,13 +253,9 @@ class App extends React.Component<IProps, IState> {
     }
 
     renderImageBlock = () => {
-        // let toolTip = "Image";
         return (
             <span className="color">
-                <span
-                    className="rgbColor rgbColor--image"
-                 //    data-tooltip={toolTip}
-                />
+                <span className="rgbColor rgbColor--image" />
                 <span>Image</span>
             </span>
         )
@@ -285,6 +284,65 @@ class App extends React.Component<IProps, IState> {
         }
     }
 
+    renderCorners = (corners:IBoxCorners) => {
+        return (
+            <span className="value value--corners">
+                <span>{corners.topLeft}</span>
+                <span className="right">{corners.topRight}</span>
+                <span>{corners.bottomLeft}</span>
+                <span className="right">{corners.bottomRight}</span>
+            </span>
+        )
+    }
+
+    renderPadding = (sides:IBoxSides) => {
+        return (
+            <span className="value value--padding">
+                <span>{sides.left}</span>
+                <span className="middle">
+                    <span>{sides.top}</span>
+                    <span>{sides.bottom}</span>
+                </span>
+                <span className="right">{sides.right}</span>
+            </span>
+        )
+    }
+
+    renderLineValue = (value: any) => {
+        if (typeof value === 'string') {
+            return <span className="value">{value}</span>
+        }
+        return <span className="value">{value.value} {value.unit.toLowerCase()}</span>
+    }
+
+    renderFontValue = (value: any) => {
+        if (typeof value === 'string') {
+            return <span className="value">{value}</span>
+        }
+        return <span className="value">{value.family} {value.style}</span>
+    }
+
+    renderDefaultValue = (value: any) => {
+        if (typeof value === 'object') {
+            return (
+                <span className="value value--object">
+                    {Object.keys(value).map(key => {
+                        return (
+                            <span className="sub-prop">
+                                <span className="sub-key">{deCamel(key)}:</span>
+                                <span className="sub-value">{truncate(value[key], 4)}</span>
+                            </span>
+                        );
+                    })}
+                </span>
+            );
+        }
+        if (typeof value === 'symbol') {
+            return <span className="value">(Mixed)</span>
+        }
+        return <span className="value">{value.toString()}</span>
+    }
+
     renderOverrideProp = (prop: any) => {
         const { key, sourceValue, targetValue } = prop;
         switch (key) {
@@ -292,6 +350,7 @@ class App extends React.Component<IProps, IState> {
             case 'effects':
             case 'fills':
             case 'strokes':
+                /* Only display the first in the array for these */
                 return (
                     <span className="prop prop--inline" key={key}>
                         <span className="key">{key}:</span>
@@ -310,48 +369,106 @@ class App extends React.Component<IProps, IState> {
                 return (
                     <div className="prop" key={key}>
                         <span className="key">Main:</span>
-                        <span className="value"><span className="string">{sourceValue.name}</span></span>
+                        <span className="value">
+                            <span 
+                                className="string hasTooltip" 
+                                data-tooltip={sourceValue.name}>
+                                    {sourceValue.name}
+                                </span>
+                            </span>
                         <span className="arrow">→</span>
-                        <span className="value"><span className="string">{targetValue.name}</span></span>
+                        <span className="value">
+                            <span 
+                                className="string hasTooltip" 
+                                data-tooltip={targetValue.name}>
+                                    {targetValue.name}
+                                </span>
+                            </span>
                     </div>
                 )
             case "name":
             case "characters":
+                const source = sourceValue.toString();
+                const target = targetValue.toString();
+                //TODO: tooltips are useless on these unless they don't run off the page
+                // const showSourceTT = source.length > 100;
+                // const showTargetTT = target.length > 100;
+                // const sourceTT = source.substring(0, 400);
+                // const targetTT = target.substring(0, 400);
                 return (
                     <div className="prop" key={key}>
                         <span className="key">{key}:</span>
-                        <span className="value"><span className="string">{sourceValue.toString()}</span></span>
+                        <span className="value">
+                            {/* <span className={`string ${showSourceTT ? 'hasTooltip' : ''}`} data-tooltip={sourceTT}> */}
+                            <span className={`string`}>
+                                {source}
+                            </span>
+                        </span>
                         <span className="arrow">→</span>
-                        <span className="value"><span className="string">{targetValue.toString()}</span></span>
+                        <span className="value">
+                            {/* <span className={`string ${showTargetTT ? 'hasTooltip' : ''}`} data-tooltip={targetTT}> */}
+                            <span className={`string`}>
+                                {target}
+                            </span>
+                        </span>
                     </div>
                 )
             case "fontName":
                 return (
                     <div className="prop" key={key}>
-                        <span className="key">Font:</span>
-                        <span className="value">{sourceValue.family} {sourceValue.style}</span>
+                        <span className="key">{deCamel(key)}:</span>
+                        {this.renderFontValue(sourceValue)}
                         <span className="arrow">→</span>
-                        <span className="value">{targetValue.family} {targetValue.style}</span>
+                        {this.renderFontValue(targetValue)}
                     </div>
                 )
             case "letterSpacing":
             case "lineHeight":
                 return (
                     <div className="prop" key={key}>
-                        <span className="key">{key}:</span>
-                        <span className="value">{sourceValue.value} {sourceValue.unit.toLowerCase()}</span>
+                        <span className="key">{deCamel(key)}:</span>
+                        {this.renderLineValue(sourceValue)}
                         <span className="arrow">→</span>
-                        <span className="value">{targetValue.value} {targetValue.unit.toLowerCase()}</span>
+                        {this.renderLineValue(targetValue)}
+                    </div>
+                )
+            case "paddingLeft":
+            case "paddingRight":
+            case "paddingTop":
+            case "paddingBottom":
+            case "topLeftRadius":
+            case "topRightRadius":
+            case "bottomLeftRadius":
+            case "bottomRightRadius":
+            case "cornerRadius":
+                // These are displayed in special custom groupings
+                return false;
+            case "corners":
+                return (
+                    <div className="prop" key="corners">
+                        <span className="key">Corners:</span>
+                        {this.renderCorners(sourceValue)}
+                        <span className="arrow">→</span>
+                        {this.renderCorners(targetValue)}
+                    </div>
+                )
+            case "padding":
+                return (
+                    <div className="prop" key="padding">
+                        <span className="key">Padding:</span>
+                        {this.renderPadding(sourceValue)}
+                        <span className="arrow">→</span>
+                        {this.renderPadding(targetValue)}
                     </div>
                 )
             default:
                 return (
-                    <div className="prop" key={key}>
-                        <span className="key">{key}:</span>
-                        <span className="value">{sourceValue.toString()}</span>
+                    <span className="prop" key={key}>
+                        <span className="key">{deCamel(key)}:</span>
+                        {this.renderDefaultValue(sourceValue)}
                         <span className="arrow">→</span>
-                        <span className="value">{targetValue.toString()}</span>
-                    </div>
+                        {this.renderDefaultValue(targetValue)}
+                    </span>
                 )
         }
     }
