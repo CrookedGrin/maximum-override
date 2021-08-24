@@ -1,6 +1,6 @@
 import * as util from './util'
 
-figma.showUI(__html__, { width: 540, height: 600 });
+figma.showUI(__html__, { title: 'Maximum Override', width: 540, height: 600 });
 
 let temporaryNodes:SceneNode[] = [];
 let dataById:{[id:string]:util.IOverrideData};
@@ -55,12 +55,15 @@ function compareProps(
     }
     /*
     If the target's mainComponent has changed, we need to compare against an instance
-    of that main rather than the original component
+    of that main rather than the original component. Note that this only applies to
+    nested instances within the target, not the root level, hence recursionLevel > 1.
     TODO: make this toggleable?
     */
     let hasNewMain:boolean;
     targetData.overriddenProps.forEach((prop) => {
-        if (prop.key === 'mainComponent') hasNewMain = true;
+        if (prop.key === 'mainComponent' && recursionLevel > 1) {
+            hasNewMain = true;
+        }
     });
     if (hasNewMain) {
         let component = ((targetData.associatedNode as InstanceNode).mainComponent as ComponentNode);

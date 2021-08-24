@@ -44,65 +44,6 @@ export function createDataWrapperForNode(node: SceneNode): IOverrideData {
     return data;
 }
 
-const parentTypes = [
-    'FRAME',
-    'GROUP',
-    'INSTANCE',
-    'COMPONENT',
-    'BOOLEAN_OPERATION'
-]
-
-export function supportsChildren(node:any):boolean {
-    return (parentTypes.indexOf(node.type) > -1);
-}
-
-const autoLayoutTypes = [
-    'FRAME',
-    'INSTANCE',
-    'COMPONENT'
-]
-
-export function supportsAutoLayout(node:any):boolean {
-    return (autoLayoutTypes.indexOf(node.type) > -1);
-}
-
-export function checkEquality(key: string, sourceValue: any, targetValue: any) {
-    if (sourceValue === undefined && targetValue === undefined) return true;
-    switch (key) {
-        case "mainComponent":
-            return sourceValue.id === targetValue.id;
-        default:
-            return equal(sourceValue, targetValue);
-    }
-}
-
-export function formatOverrideProp(key: string, prop: any) {
-    switch (key) {
-        case "backgrounds":
-        case "fills":
-        case "strokes":
-            if (!Array.isArray(prop) || !prop[0]) {
-                return [];
-            }
-            break;
-        case "mainComponent":
-            return { name: prop.name, id: prop.id };
-    }
-    if (typeof prop === 'symbol') return '(Mixed)';
-    return prop;
-}
-
-export function countChildren(node:any):number {
-    let counter:number = 0;
-    if (node.children) {
-        node.children.forEach((child) => {
-            counter++;
-            counter += countChildren(child);
-        })
-    }
-    return counter;
-}
-
 export interface IProps {
     width: number;
     height: number;
@@ -168,6 +109,67 @@ export interface IProps {
     textDecoration: string | PluginAPI["mixed"];
     textStyleId: string | PluginAPI["mixed"];
 }
+
+const parentTypes = [
+    'FRAME',
+    'GROUP',
+    'INSTANCE',
+    'COMPONENT',
+    'BOOLEAN_OPERATION'
+]
+
+export function supportsChildren(node:any):boolean {
+    return (parentTypes.indexOf(node.type) > -1);
+}
+
+const autoLayoutTypes = [
+    'FRAME',
+    'INSTANCE',
+    'COMPONENT'
+]
+
+export function supportsAutoLayout(node:any):boolean {
+    return (autoLayoutTypes.indexOf(node.type) > -1);
+}
+
+export function checkEquality(key: string, sourceValue: any, targetValue: any) {
+    if (sourceValue === undefined && targetValue === undefined) return true;
+    switch (key) {
+        case "mainComponent":
+            return sourceValue.id === targetValue.id;
+        default:
+            return equal(sourceValue, targetValue);
+    }
+}
+
+export function formatOverrideProp(key: string, prop: any) {
+    switch (key) {
+        case "backgrounds":
+        case "fills":
+        case "strokes":
+            if (!Array.isArray(prop) || !prop[0]) {
+                return [];
+            }
+            break;
+        case "mainComponent":
+            return { name: prop.name, id: prop.id };
+    }
+    if (typeof prop === 'symbol') return '(Mixed)';
+    return prop;
+}
+
+export function countChildren(node:any):number {
+    let counter:number = 0;
+    if (node.children) {
+        node.children.forEach((child) => {
+            counter++;
+            counter += countChildren(child);
+        })
+    }
+    return counter;
+}
+
+
 
 /**
  * NOTE: Using the explicit property names like this is many, many times

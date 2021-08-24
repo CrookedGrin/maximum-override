@@ -401,7 +401,7 @@ class App extends React.Component<IProps, IState> {
                         <span className="value">
                             {/* <span className={`string ${showSourceTT ? 'hasTooltip' : ''}`} data-tooltip={sourceTT}> */}
                             <span className={`string`}>
-                                {source}
+                                {sourceValue}
                             </span>
                         </span>
                         <span className="arrow">→</span>
