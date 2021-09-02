@@ -208,18 +208,58 @@
       display: flex;
       position: relative;
       align-items: center;
-      padding: 2px 6px;
+      padding: 2px 6px 2px 20px;
       background: #fff;
       border-radius: 4px;
       margin: 0 8px 4px;
       max-width: fit-content;
+      cursor: pointer;
+      pointer-events: all;
 
-      &--inline {
-        display: inline-flex;
+      &::after {
+        content: ' ';
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        color: var(--purple);
+        background: #eee;
+        border-radius: 2px;
+        height: 11px;
+        width: 11px;
+        line-height: 11px;
+        box-shadow: 1px 1px 0px #888 inset, -1px -1px 0px #ddd inset;
+        overflow: hidden;
+        padding: 0 0 1px 1px;
+
       }
 
-      &:first-child {
-        margin-top: 4px;
+      &:hover::after {
+        content: '';
+        background: #ccc;
+      }
+
+      &.selected::after {
+        content: '✓';
+        background: #fff;
+      }
+      
+      &.selected:hover::after {
+        content: '✓';
+        background: #ddd;
+      }
+
+      // &--inline {
+      //   display: inline-flex;
+      // }
+
+      .prop-inner {
+        display: flex;
+        position: relative;
+        align-items: center;
+
+        span:not(:first-child) {
+          margin-left: 2px;
+        }
       }
 
       .value {
@@ -306,10 +346,6 @@
       .key, .arrow {
         text-transform: capitalize;
         color: var(--hud)
-      }
-
-      span:not(:first-child) {
-        margin-left: 2px;
       }
     }
 

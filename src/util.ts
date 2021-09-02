@@ -8,15 +8,42 @@ export function log(indentLevel:number = 0, ...args) {
     console.log(indent, ...args);
 }
 
+// Recursive
+export function flattenData(data:IOverrideData):{} {
+    let flat = {};
+    if (data.overriddenProps) {
+        data.overriddenProps.map(prop => {
+            flat[`${data.id}--${prop.key}`] = prop;
+        });
+    }
+    if (data.children) {
+        data.children.map(child => {
+            flat = Object.assign({}, flat, flattenData(child));
+        });
+    }
+    return flat;
+}
+
+// Override data associated with a node and its children
 export interface IOverrideData {
-    name: string;
+    sourceName: string;
+    targetName: string;
     type: string;
-    id: string;
-    associatedNode: SceneNode;
-    overriddenProps?: any[];
-    childData?: IOverrideData[];
+    id: string; // Combo of source and target IDs
+    sourceNode: SceneNode;
+    targetNode: SceneNode;
+    overriddenProps?: IOverrideProp[];
+    children?: IOverrideData[];
     isCollapsed?: boolean;
     parentId?: string;
+}
+
+// An individual overridden property on a node. Values can be of many different types (see IProps)
+export interface IOverrideProp {
+    key: string;
+    sourceValue: any;
+    targetValue: any;
+    isApplied: boolean;
 }
 
 export interface IBoxSides {
@@ -33,12 +60,18 @@ export interface IBoxCorners {
     bottomRight: number;
 }
 
-export function createDataWrapperForNode(node: SceneNode): IOverrideData {
+export function getCombinedId(source:SceneNode, target:SceneNode):string {
+    return `${source.id}__${target.id}`;
+}
+
+export function createOverrideData(sourceNode: SceneNode, targetNode: SceneNode): IOverrideData {
     let data: IOverrideData = {
-        name: node.name,
-        type: node.type,
-        id: node.id,
-        associatedNode: node,
+        sourceName: sourceNode.name,
+        targetName: targetNode.name,
+        type: targetNode.type,
+        id: getCombinedId(sourceNode, targetNode),
+        sourceNode,
+        targetNode,
         isCollapsed: true, // collapsed by default; recursively set to false if overrides exist
     };
     return data;
@@ -142,7 +175,7 @@ export function checkEquality(key: string, sourceValue: any, targetValue: any) {
     }
 }
 
-export function formatOverrideProp(key: string, prop: any) {
+export function formatOverrideValue(key: string, prop: any) {
     switch (key) {
         case "backgrounds":
         case "fills":

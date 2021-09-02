@@ -8,15 +8,16 @@ import {
     SelectionValidation,
     IColor,
     IOverrideData,
+    IOverrideProp,
     IBoxCorners,
     IBoxSides,
     rgbaToHex,
     formatRgbaColor,
     createCssGradient,
     truncate,
-    deCamel
+    deCamel,
+    flattenData
 } from './util'
-
 declare function require(path: string): any
 
 interface IProps {}
@@ -29,17 +30,22 @@ interface IState {
     swapEnabled: boolean;
     selectionValidation: ISelectionValidation;
     diffCollapsed: boolean;
-    sourceData?: IOverrideData;
-    targetData?: IOverrideData;
+    data?: IOverrideData;
     copyButtonMessage: string;
     clientStorageValidated: boolean;
     totalNodeCount: number;
     comparedNodeCount: number;
     comparisonInProgress: boolean;
+    propToggleStates: any;
 }
 
 
 class App extends React.Component<IProps, IState> {
+
+    /**********************************
+     * State management
+     **********************************/
+
     state: IState = {
         diffCollapsed: false,
         inspectMessage: '',
@@ -48,14 +54,44 @@ class App extends React.Component<IProps, IState> {
         pasteEnabled: false,
         swapEnabled: false,
         selectionValidation: undefined,
-        sourceData: undefined,
-        targetData: undefined,
+        data: undefined,
         copyButtonMessage: "Copy overrides",
         clientStorageValidated: false,
         totalNodeCount: 0,
         comparedNodeCount: 0,
-        comparisonInProgress: false
+        comparisonInProgress: false,
+        propToggleStates: undefined
     };
+
+    // Recursive
+    initPropToggleStates = (nodeData:IOverrideData) => {
+        let a = {
+            props: {},
+            children: {}
+        };
+        if (!nodeData) return a;
+        if (nodeData.overriddenProps) {
+            let props = nodeData.overriddenProps;
+            props.map(prop => {
+                a.props[prop.key] = prop.isApplied;
+            })
+        }
+        if (nodeData.children) {
+            nodeData.children.map(childData => {
+                a.children[childData.id] = this.initPropToggleStates(childData);
+            });
+        }
+        return a;
+    }
+
+    getPropToggleStates = () => {
+        let s = {};
+        return s;
+    }
+
+    /**********************************
+     * Lifecycle
+     **********************************/
 
     componentDidMount = () => {
         window.addEventListener("message", (event) => {
@@ -83,7 +119,7 @@ class App extends React.Component<IProps, IState> {
                             inspectMessage = "Select items to compare";
                             break;
                     }
-                    let canSwap:boolean = (validation.reason === SelectionValidation.IS_TWO) && (this.state.targetData !== undefined);
+                    let canSwap:boolean = (validation.reason === SelectionValidation.IS_TWO) && (this.state.data !== undefined);
                     this.setState({
                         inspectEnabled: validation.isValid,
                         selectionValidation: validation,
@@ -100,13 +136,13 @@ class App extends React.Component<IProps, IState> {
                     break;
                 case "comparison-finished":
                     this.setState({
-                        targetData: payload.target,
-                        sourceData: payload.source,
+                        data: payload,
                         copyEnabled: true,
                         swapEnabled: this.state.selectionValidation.reason === SelectionValidation.IS_TWO,
                         copyButtonMessage: "Copy overrides",
                         inspectEnabled: false,
-                        comparisonInProgress: false
+                        comparisonInProgress: false,
+                        propToggleStates: flattenData(payload)
                     });
                     break;
                 case "copy-confirmation":
@@ -156,8 +192,8 @@ class App extends React.Component<IProps, IState> {
                 type: 'swap-selected',
                 data: {
                     // Figma won't pass the whole object, so just send the ids
-                    targetId: this.state.targetData.id,
-                    sourceId: this.state.sourceData.id
+                    targetId: this.state.data.targetNode.id,
+                    sourceId: this.state.data.sourceNode.id
                 }
             }
         }, '*')
@@ -167,7 +203,7 @@ class App extends React.Component<IProps, IState> {
         parent.postMessage({
             pluginMessage: {
                 type: 'copy-overrides',
-                data: this.state.targetData,
+                data: this.state.data,
             }
         }, '*')
     }
@@ -178,7 +214,7 @@ class App extends React.Component<IProps, IState> {
                 type: 'paste-overrides',
                 // If there are 2 nodes selected, paste back from target onto source
                 data: {
-                    targetId: this.state.sourceData ? this.state.sourceData.id : undefined
+                    targetId: this.state.data ? this.state.data.targetNode.id : undefined
                 }
             }
         }, '*')
@@ -200,6 +236,15 @@ class App extends React.Component<IProps, IState> {
             }, '*')
         }
     }
+
+    onPropClick = (e) => {
+        debugger;
+        const dataset = e.currentTarget.dataset;
+        const id = `${dataset.nodeid}--${dataset.propid}`;
+        const prop:IOverrideProp = this.state.propToggleStates[id];
+        prop.isApplied = !prop.isApplied;
+    }
+
 
     /**********************************
      * Rendering
@@ -343,31 +388,24 @@ class App extends React.Component<IProps, IState> {
         return <span className="value">{value.toString()}</span>
     }
 
-    renderOverrideProp = (prop: any) => {
+    renderOverrideProp = (prop: IOverrideProp) => {
         const { key, sourceValue, targetValue } = prop;
         switch (key) {
-            case 'backgrounds':
             case 'effects':
             case 'fills':
             case 'strokes':
                 /* Only display the first in the array for these */
                 return (
-                    <span className="prop prop--inline" key={key}>
+                    <span className="prop-inner prop--inline">
                         <span className="key">{key}:</span>
                         <span>{this.renderColor(sourceValue[0])}</span>
                         <span className="arrow">→</span>
                         <span>{this.renderColor(targetValue[0])}</span>
                     </span>
                 )
-            case 'backgroundStyleId':
-            case 'effectStyleId':
-            case 'fillStyleId':
-            case 'strokeStyleId':
-                // Hide these in the UI
-                return false;
             case "mainComponent":
                 return (
-                    <div className="prop" key={key}>
+                    <div className="prop-inner">
                         <span className="key">Main:</span>
                         <span className="value">
                             <span 
@@ -396,7 +434,7 @@ class App extends React.Component<IProps, IState> {
                 // const sourceTT = source.substring(0, 400);
                 // const targetTT = target.substring(0, 400);
                 return (
-                    <div className="prop" key={key}>
+                    <div className="prop-inner">
                         <span className="key">{key}:</span>
                         <span className="value">
                             {/* <span className={`string ${showSourceTT ? 'hasTooltip' : ''}`} data-tooltip={sourceTT}> */}
@@ -415,7 +453,7 @@ class App extends React.Component<IProps, IState> {
                 )
             case "fontName":
                 return (
-                    <div className="prop" key={key}>
+                    <div className="prop-inner">
                         <span className="key">{deCamel(key)}:</span>
                         {this.renderFontValue(sourceValue)}
                         <span className="arrow">→</span>
@@ -425,27 +463,16 @@ class App extends React.Component<IProps, IState> {
             case "letterSpacing":
             case "lineHeight":
                 return (
-                    <div className="prop" key={key}>
+                    <div className="prop-inner">
                         <span className="key">{deCamel(key)}:</span>
                         {this.renderLineValue(sourceValue)}
                         <span className="arrow">→</span>
                         {this.renderLineValue(targetValue)}
                     </div>
                 )
-            case "paddingLeft":
-            case "paddingRight":
-            case "paddingTop":
-            case "paddingBottom":
-            case "topLeftRadius":
-            case "topRightRadius":
-            case "bottomLeftRadius":
-            case "bottomRightRadius":
-            case "cornerRadius":
-                // These are displayed in special custom groupings
-                return false;
             case "corners":
                 return (
-                    <div className="prop" key="corners">
+                    <div className="prop-inner">
                         <span className="key">Corners:</span>
                         {this.renderCorners(sourceValue)}
                         <span className="arrow">→</span>
@@ -454,7 +481,7 @@ class App extends React.Component<IProps, IState> {
                 )
             case "padding":
                 return (
-                    <div className="prop" key="padding">
+                    <div className="prop-inner">
                         <span className="key">Padding:</span>
                         {this.renderPadding(sourceValue)}
                         <span className="arrow">→</span>
@@ -463,7 +490,7 @@ class App extends React.Component<IProps, IState> {
                 )
             default:
                 return (
-                    <span className="prop" key={key}>
+                    <span className="prop-inner">
                         <span className="key">{deCamel(key)}:</span>
                         {this.renderDefaultValue(sourceValue)}
                         <span className="arrow">→</span>
@@ -473,12 +500,39 @@ class App extends React.Component<IProps, IState> {
         }
     }
 
-    renderOverrideProps = (props: any[]) => {
+    renderOverrideProps = (props: any[], nodeId: string) => {
+        const doNotRender = [
+            'backgrounds',
+            'backgroundStyleId',
+            'effectStyleId',
+            'fillStyleId',
+            'strokeStyleId',
+            'paddingLeft',
+            'paddingRight',
+            'paddingTop',
+            'paddingBottom',
+            'topLeftRadius',
+            'topRightRadius',
+            'bottomLeftRadius',
+            'bottomRightRadius',
+            'cornerRadius',
+        ]
         return (
             <div className="props">
                 {
                     props.map(prop => {
-                        return this.renderOverrideProp(prop)
+                        if (doNotRender.includes(prop.key)) return false;
+                        return (
+                            <div
+                                className={`prop ${prop.key === 'fills' ? 'selected' : ''} `}
+                                key={prop.key}
+                                data-propid={prop.key}
+                                data-nodeid={nodeId}
+                                onClick={this.onPropClick}
+                            >
+                                {this.renderOverrideProp(prop)}
+                            </div>
+                        )
                     })
                 }
             </div>
@@ -501,6 +555,9 @@ class App extends React.Component<IProps, IState> {
             case "RECTANGLE":
                 iconText = "▭";
                 break;
+            case "LINE":
+                iconText = "─";
+                break;
         }
         let iconClass = `icon icon--purple icon--${iconType}`;
         return <div className={iconClass}>{iconText}</div>
@@ -514,7 +571,7 @@ class App extends React.Component<IProps, IState> {
     // Recursive
     renderDiff = (nodeData: IOverrideData, isTop: boolean) => {
         let classes = isTop ? "node node--top" : "node";
-        const isCollapsible = nodeData.childData || nodeData.overriddenProps.length > 0;
+        const isCollapsible = nodeData.children || nodeData.overriddenProps.length > 0;
         const titleClasses = isCollapsible ? "title title--collapsible" : "title";
         return (
             <div className={classes} key={nodeData.id.toString()}>
@@ -523,15 +580,15 @@ class App extends React.Component<IProps, IState> {
                         this.renderCaret(nodeData.isCollapsed)
                     }
                     {this.renderNodeIcon(nodeData.type)}
-                    <span className="node-name">{nodeData.name}</span>
+                    <span className="node-name">{nodeData.sourceName}</span>
                 </span>
                 {!nodeData.isCollapsed && (
                     <>
                         {nodeData.overriddenProps &&
-                            this.renderOverrideProps(nodeData.overriddenProps)
+                            this.renderOverrideProps(nodeData.overriddenProps, nodeData.id)
                         }
-                        {nodeData.childData &&
-                            nodeData.childData.map(child => {
+                        {nodeData.children &&
+                            nodeData.children.map(child => {
                                 return this.renderDiff(child, false);
                             })
                         }
@@ -555,7 +612,7 @@ class App extends React.Component<IProps, IState> {
     }
 
     renderHeader() {
-        let {sourceData, targetData, comparisonInProgress} = this.state;
+        let {data, comparisonInProgress} = this.state;
         if (comparisonInProgress) {
             return (
                 <div className="header header--loading">
@@ -563,15 +620,15 @@ class App extends React.Component<IProps, IState> {
                 </div>
             )
         }
-        if (sourceData === undefined || targetData === undefined) return <div className="header" />
+        if (data === undefined) return <div className="header" />
         return (
             <div className="header" onClick={this.onExpandCollapse}>
                 {this.renderCaret(this.state.diffCollapsed)}
-                <span>{this.renderNodeIcon(sourceData.type)}</span>
-                <span className="compare-node">{sourceData.name}</span>
+                <span>{this.renderNodeIcon(data.type)}</span>
+                <span className="compare-node">{data.sourceName}</span>
                 <span className="arrow">→</span>
-                <span>{this.renderNodeIcon(targetData.type)}</span>
-                <span className="compare-node">{targetData.name}</span>
+                <span>{this.renderNodeIcon(data.type)}</span>
+                <span className="compare-node">{data.targetName}</span>
             </div>
         )
     }
@@ -616,7 +673,7 @@ class App extends React.Component<IProps, IState> {
                         {this.renderHeader()}
                         <div className={diffClasses}>
                             <div className="nodes">
-                                {this.state.targetData === undefined &&
+                                {this.state.data === undefined &&
                                     <div className="emptyState">
                                         <div className="logo" />
                                         <p>Select one <strong>component instance</strong> to compare it against its main component</p>
@@ -624,8 +681,8 @@ class App extends React.Component<IProps, IState> {
                                         <p>Select <strong>two items</strong> of any type to compare them to each other.</p>
                                     </div>
                                 }
-                                {this.state.targetData && 
-                                    this.renderDiff(this.state.targetData, true)
+                                {this.state.data && 
+                                    this.renderDiff(this.state.data, true)
                                 }
                             </div>
                         </div>
