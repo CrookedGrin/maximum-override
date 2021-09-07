@@ -279,7 +279,9 @@ function applyOverridesToNode(
   data.overriddenProps.forEach((prop) => {
     try {
       if (prop.key in target) {
-        applyOverrideProp(prop.key, prop.sourceValue, target, isRoot);
+        if (prop.isApplied) {
+          applyOverrideProp(prop.key, prop.sourceValue, target, isRoot);
+        }
       }
     } catch (e) {
       log(0, "Cannot apply prop", prop, e);

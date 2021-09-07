@@ -219,7 +219,6 @@
       &::after {
         content: ' ';
         position: absolute;
-        top: 4px;
         left: 4px;
         color: var(--purple);
         background: #eee;
@@ -257,9 +256,9 @@
         position: relative;
         align-items: center;
 
-        span:not(:first-child) {
-          margin-left: 2px;
-        }
+        // span:not(:first-child) {
+        //   margin-left: 2px;
+        // }
       }
 
       .value {

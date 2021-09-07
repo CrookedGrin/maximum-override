@@ -83,8 +83,8 @@ export interface IProps {
 
     // absoluteTransform: Transform;
     arcData: ArcData;
-    backgrounds: Paint[];
-    backgroundStyleId: string;
+    // backgrounds: Paint[]; // Deprecated
+    // backgroundStyleId: string; // Deprecated
     bottomLeftRadius: number;
     bottomRightRadius: number;
     blendMode: BlendMode;
@@ -216,8 +216,8 @@ export function getPropsFromNode(node:any):IProps {
 
     // props.absoluteTransform = node.absoluteTransform;
     props.arcData = node.arcData;
-    props.backgrounds = node.backgrounds;
-    props.backgroundStyleId = node.backgroundStyleId;
+    // props.backgrounds = node.backgrounds; // Deprecated
+    // props.backgroundStyleId = node.backgroundStyleId; // Deprecated
     props.blendMode = node.blendMode;
     props.bottomLeftRadius = node.bottomLeftRadius;
     props.bottomRightRadius = node.bottomRightRadius;

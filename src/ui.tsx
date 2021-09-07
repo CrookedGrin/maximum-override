@@ -238,11 +238,11 @@ class App extends React.Component<IProps, IState> {
     }
 
     onPropClick = (e) => {
-        debugger;
         const dataset = e.currentTarget.dataset;
         const id = `${dataset.nodeid}--${dataset.propid}`;
         const prop:IOverrideProp = this.state.propToggleStates[id];
         prop.isApplied = !prop.isApplied;
+        this.forceUpdate();
     }
 
 
@@ -524,7 +524,7 @@ class App extends React.Component<IProps, IState> {
                         if (doNotRender.includes(prop.key)) return false;
                         return (
                             <div
-                                className={`prop ${prop.key === 'fills' ? 'selected' : ''} `}
+                                className={`prop ${prop.isApplied ? 'selected' : ''} `}
                                 key={prop.key}
                                 data-propid={prop.key}
                                 data-nodeid={nodeId}
