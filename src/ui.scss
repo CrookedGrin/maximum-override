@@ -1,5 +1,7 @@
 .MaximumOverride {
   padding: 12px;
+  --mo-blue-light: #56CCF2;
+  --mo-blue-med: #6DBFFA;
 }
 
 ::-webkit-scrollbar {
@@ -385,7 +387,7 @@
 
       &--image {
         background:
-          url('data:image/svg+xml;utf8,<svg preserveAspectRatio="none"  viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="5" height="5" fill="grey" /><rect x="5" y="5" width="5" height="5" fill="grey" /><rect x="5" y="0" width="5" height="5" fill="white" /><rect x="0" y="5" width="5" height="5" fill="white" /></svg>') 
+          url('data:image/svg+xml;utf8,<svg preserveAspectRatio="none" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="5" height="5" fill="grey" /><rect x="5" y="5" width="5" height="5" fill="grey" /><rect x="5" y="0" width="5" height="5" fill="white" /><rect x="0" y="5" width="5" height="5" fill="white" /></svg>') 
           0 0/50% 50%;
       }
 
@@ -432,4 +434,76 @@
       opacity: 1;
     }
   }
+}
+
+@keyframes spin {
+  0% {
+      transform:rotate(0deg);
+  }
+  // 75% {
+  //     transform:rotate(360deg);
+  // }
+  100% {
+      transform:rotate(360deg);
+  }
+}
+
+.loader {
+  inset: 0;
+  position: fixed;
+  margin: auto;
+  width: 64px;
+  height: 64px;
+  isolation: isolate;
+
+  span {
+    width: 68px;
+    height: 68px;
+    position: absolute;
+    inset: 0;
+    display: inline-block;
+
+    &::before, &::after {
+      content: '⚆';
+      color: var(--purple);
+      font-size: 60px;
+      font-weight: 100;
+      width: auto;
+      height: 64px;
+      border-radius: 8px;
+      position: absolute;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      animation: spin 1.25s ease-in-out infinite;
+      opacity: .5;
+    }
+  }
+  span:first-child {
+    &::before { 
+      animation-delay: 0; 
+      z-index: 4;
+      opacity: 1;
+    }
+    &::after { 
+      filter: saturate(125%) brightness(125%) hue-rotate(45deg);
+      animation-delay: 0.05s; 
+      z-index: 3;
+    }
+  }
+  span:last-child {
+    &::before { 
+      filter: saturate(150%) brightness(170%) hue-rotate(90deg);;
+      animation-delay: 0.1s; 
+      z-index: 2;
+    }
+    &::after { 
+      filter: saturate(175%) brightness(250%) hue-rotate(135deg);
+      animation-delay: 0.15s;
+      z-index: 1;
+    }
+  }
+
+
 }

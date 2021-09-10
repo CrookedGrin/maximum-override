@@ -175,14 +175,13 @@ class App extends React.Component<IProps, IState> {
     onInspect = () => {
         this.setState({
             comparisonInProgress: true
-        }, () => {
-            this.forceUpdate(() => {
-                parent.postMessage({
-                    pluginMessage: {
-                        type: 'compare-selected'
-                    }
-                }, '*')
-            });
+        }, this.forceUpdate);
+        requestAnimationFrame(() => {
+            parent.postMessage({
+                pluginMessage: {
+                    type: 'compare-selected'
+                }
+            }, '*')
         });
     }
 
@@ -673,17 +672,22 @@ class App extends React.Component<IProps, IState> {
                         {this.renderHeader()}
                         <div className={diffClasses}>
                             <div className="nodes">
-                                {this.state.data === undefined &&
-                                    <div className="emptyState">
-                                        <div className="logo" />
-                                        <p>Select one <strong>component instance</strong> to compare it against its main component</p>
-                                        <p className="centered"><strong>OR</strong></p>
-                                        <p>Select <strong>two items</strong> of any type to compare them to each other.</p>
-                                    </div>
+                                {this.state.comparisonInProgress && 
+                                    <div className="loader"><span/><span/></div>
                                 }
-                                {this.state.data && 
-                                    this.renderDiff(this.state.data, true)
-                                }
+                                {!this.state.comparisonInProgress && <>
+                                    {this.state.data === undefined &&
+                                        <div className="emptyState">
+                                            <div className="logo" />
+                                            <p>Select one <strong>component instance</strong> to compare it against its main component</p>
+                                            <p className="centered"><strong>OR</strong></p>
+                                            <p>Select <strong>two items</strong> of any type to compare them to each other.</p>
+                                        </div>
+                                    }
+                                    {this.state.data && 
+                                        this.renderDiff(this.state.data, true)
+                                    }
+                                </>}
                             </div>
                         </div>
                     </div>

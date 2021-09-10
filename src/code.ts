@@ -354,10 +354,11 @@ figma.ui.onmessage = (msg) => {
   if (msg.type === "compare-selected") {
     const selection: SceneNode[] = Array.from(figma.currentPage.selection);
     let start = new Date().getTime();
+    log(0, "Started inspecting selected nodes...")
     let data = getDataFromSelection(selection);
     let diff = getOverrides(data);
     let end = new Date().getTime();
-    log(0, "Finished inspecting selected nodes.", data.id, end - start);
+    log(1, "Finished inspecting selected nodes.", data.id, end - start);
     figma.ui.postMessage({
       type: "comparison-finished",
       payload: diff,
