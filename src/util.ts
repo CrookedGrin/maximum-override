@@ -11,6 +11,7 @@ export function log(indentLevel:number = 0, ...args) {
 // Recursive
 export function flattenData(data:IOverrideData):{} {
     let flat = {};
+    if (!data) return flat;
     if (data.overriddenProps) {
         data.overriddenProps.map(prop => {
             flat[`${data.id}--${prop.key}`] = prop;

@@ -212,6 +212,7 @@
       align-items: center;
       padding: 2px 6px 2px 20px;
       background: #fff;
+      opacity: .5;
       border-radius: 4px;
       margin: 0 8px 4px;
       max-width: fit-content;
@@ -237,6 +238,10 @@
       &:hover::after {
         content: '';
         background: #ccc;
+      }
+
+      &.selected {
+        opacity: 1;
       }
 
       &.selected::after {

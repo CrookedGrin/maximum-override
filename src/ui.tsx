@@ -570,6 +570,9 @@ class App extends React.Component<IProps, IState> {
     // Recursive
     renderDiff = (nodeData: IOverrideData, isTop: boolean) => {
         let classes = isTop ? "node node--top" : "node";
+        if (!nodeData) {
+            return;
+        }
         const isCollapsible = nodeData.children || nodeData.overriddenProps.length > 0;
         const titleClasses = isCollapsible ? "title title--collapsible" : "title";
         return (

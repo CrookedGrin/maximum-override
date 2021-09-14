@@ -57,6 +57,7 @@ function compareProps(
 ):IOverrideData {
   data.overriddenProps = []; // Clear in case of swap
   data = getOverridesForData(data, recursionLevel + 1);
+  if (!data || !data.overriddenProps) return;
   if (data.overriddenProps.length > 0) {
     hasOverrides.push(data);
   }
